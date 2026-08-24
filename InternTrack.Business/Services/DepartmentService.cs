@@ -28,14 +28,25 @@ public class DepartmentService : IDepartmentService
         return await _departmentRepository.GetByIdAsync(id);
     }
 
-    public async Task AddAsync(CreateDepartmentDto dto)
+    public async Task<string> AddAsync(CreateDepartmentDto dto)
     {
+        var departmentName = dto.Name.Trim();
+
+        var nameExists = await _departmentRepository.NameExistsAsync(departmentName);
+
+        if (nameExists)
+        {
+            return "Bu departman zaten kayıtlı.";
+        }
+
         var department = new Department
         {
-            Name = dto.Name.Trim()
+            Name = departmentName
         };
 
         await _departmentRepository.AddAsync(department);
+
+        return "Departman oluşturuldu.";
     }
 
     public async Task<string> DeleteAsync(int id)
@@ -47,9 +58,7 @@ public class DepartmentService : IDepartmentService
             return "Departman bulunamadı.";
         }
 
-        var interns = await _internRepository.GetAllAsync();
-
-        var hasInterns = interns.Any(x => x.DepartmentId == id);
+        var hasInterns = await _internRepository.ExistsByDepartmentIdAsync(id);
 
         if (hasInterns)
         {

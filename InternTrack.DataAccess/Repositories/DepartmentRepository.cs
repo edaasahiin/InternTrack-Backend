@@ -25,6 +25,14 @@ public class DepartmentRepository : IDepartmentRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<bool> NameExistsAsync(string name)
+    {
+        var normalizedName = name.Trim().ToLower();
+
+        return await _db.Departments
+            .AnyAsync(x => x.Name.ToLower() == normalizedName);
+    }
+
     public async Task AddAsync(Department department)
     {
         await _db.Departments.AddAsync(department);

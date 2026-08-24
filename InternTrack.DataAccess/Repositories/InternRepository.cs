@@ -28,6 +28,20 @@ public class InternRepository : IInternRepository
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
+    public async Task<bool> EmailExistsAsync(string email)
+    {
+        var normalizedEmail = email.Trim().ToLower();
+
+        return await _db.Interns
+            .AnyAsync(x => x.Email.ToLower() == normalizedEmail);
+    }
+
+    public async Task<bool> ExistsByDepartmentIdAsync(int departmentId)
+    {
+        return await _db.Interns
+            .AnyAsync(x => x.DepartmentId == departmentId);
+    }
+
     public async Task AddAsync(Intern intern)
     {
         await _db.Interns.AddAsync(intern);

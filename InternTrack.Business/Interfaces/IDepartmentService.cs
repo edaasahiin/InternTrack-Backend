@@ -6,7 +6,10 @@ namespace InternTrack.Business.Interfaces;
 public interface IDepartmentService
 {
     Task<List<Department>> GetAllAsync();
+
     Task<Department?> GetByIdAsync(int id);
-    Task AddAsync(CreateDepartmentDto dto);
+
+    Task<string> AddAsync(CreateDepartmentDto dto);
+
     Task<string> DeleteAsync(int id);
 }

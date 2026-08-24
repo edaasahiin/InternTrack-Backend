@@ -37,12 +37,9 @@ public class InternService : IInternService
             return "Departman bulunamadı.";
         }
 
-        var interns = await _internRepository.GetAllAsync();
+        var emailExists = await _internRepository.EmailExistsAsync(dto.Email.Trim());
 
-        var existing = interns
-            .FirstOrDefault(x => x.Email == dto.Email);
-
-        if (existing != null)
+        if (emailExists)
         {
             return "Bu email adresi zaten kayıtlı.";
         }

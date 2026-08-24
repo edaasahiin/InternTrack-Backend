@@ -42,11 +42,19 @@ public class DepartmentController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Add(CreateDepartmentDto dto)
     {
-        await _service.AddAsync(dto);
+        var result = await _service.AddAsync(dto);
+
+        if (result == "Bu departman zaten kayıtlı.")
+        {
+            return BadRequest(new
+            {
+                message = result
+            });
+        }
 
         return StatusCode(StatusCodes.Status201Created, new
         {
-            message = "Departman oluşturuldu."
+            message = result
         });
     }
 
