@@ -1,3 +1,4 @@
+using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Entities.DTOs;
@@ -23,25 +24,40 @@ public class InternService : IInternService
         return await _internRepository.GetAllAsync();
     }
 
-    public async Task<Intern?> GetByIdAsync(int id)
+    public async Task<ServiceResult<Intern>> GetByIdAsync(int id)
     {
-        return await _internRepository.GetByIdAsync(id);
+        var intern = await _internRepository.GetByIdAsync(id);
+
+        if (intern == null)
+        {
+            return ServiceResult<Intern>.NotFound(
+                "Stajyer bulunamadı."
+            );
+        }
+
+        return ServiceResult<Intern>.Ok(intern);
     }
 
-    public async Task<string> AddAsync(CreateInternDto dto)
+    public async Task<ServiceResult> AddAsync(CreateInternDto dto)
     {
-        var department = await _departmentRepository.GetByIdAsync(dto.DepartmentId);
+        var department =
+            await _departmentRepository.GetByIdAsync(dto.DepartmentId);
 
         if (department == null)
         {
-            return "Departman bulunamadı.";
+            return ServiceResult.ValidationError(
+                "Departman bulunamadı."
+            );
         }
 
-        var emailExists = await _internRepository.EmailExistsAsync(dto.Email.Trim());
+        var emailExists =
+            await _internRepository.EmailExistsAsync(dto.Email.Trim());
 
         if (emailExists)
         {
-            return "Bu email adresi zaten kayıtlı.";
+            return ServiceResult.Conflict(
+                "Bu email adresi zaten kayıtlı."
+            );
         }
 
         var intern = new Intern
@@ -53,20 +69,26 @@ public class InternService : IInternService
 
         await _internRepository.AddAsync(intern);
 
-        return "Stajyer eklendi.";
+        return ServiceResult.Ok(
+            "Stajyer eklendi."
+        );
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
         var intern = await _internRepository.GetByIdAsync(id);
 
         if (intern == null)
         {
-            return false;
+            return ServiceResult.NotFound(
+                "Stajyer bulunamadı."
+            );
         }
 
         await _internRepository.DeleteAsync(intern);
 
-        return true;
+        return ServiceResult.Ok(
+            "Stajyer silindi."
+        );
     }
 }

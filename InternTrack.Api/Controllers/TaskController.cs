@@ -1,3 +1,4 @@
+using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Entities.DTOs;
 using Microsoft.AspNetCore.Mvc;
@@ -19,24 +20,18 @@ public class TaskController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var tasks = await _service.GetAllAsync();
-
         return Ok(tasks);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var task = await _service.GetByIdAsync(id);
+        var result = await _service.GetByIdAsync(id);
 
-        if (task == null)
-        {
-            return NotFound(new
-            {
-                message = "Görev bulunamadı."
-            });
-        }
-
-        return Ok(task);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
     }
 
     [HttpPost]
@@ -44,60 +39,35 @@ public class TaskController : ControllerBase
     {
         var result = await _service.AddAsync(dto);
 
-        if (result == "Stajyer bulunamadı.")
-        {
-            return BadRequest(new
-            {
-                message = result
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            message = result
-        });
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result,
+            StatusCodes.Status201Created
+        );
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, UpdateTaskDto dto)
+    public async Task<IActionResult> Update(
+        int id,
+        UpdateTaskDto dto)
     {
         var result = await _service.UpdateAsync(id, dto);
 
-        if (result == "Görev bulunamadı.")
-        {
-            return NotFound(new
-            {
-                message = result
-            });
-        }
-
-        if (result == "Stajyer bulunamadı.")
-        {
-            return BadRequest(new
-            {
-                message = result
-            });
-        }
-
-        return Ok(new
-        {
-            message = result
-        });
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _service.DeleteAsync(id);
+        var result = await _service.DeleteAsync(id);
 
-        if (!deleted)
-        {
-            return NotFound(new
-            {
-                message = "Görev bulunamadı."
-            });
-        }
-
-        return NoContent();
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result,
+            noContentOnSuccess: true
+        );
     }
 }

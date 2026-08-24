@@ -1,3 +1,4 @@
+using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Entities.DTOs;
 using Microsoft.AspNetCore.Mvc;
@@ -19,24 +20,18 @@ public class DepartmentController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var departments = await _service.GetAllAsync();
-
         return Ok(departments);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var department = await _service.GetByIdAsync(id);
+        var result = await _service.GetByIdAsync(id);
 
-        if (department == null)
-        {
-            return NotFound(new
-            {
-                message = "Departman bulunamadı."
-            });
-        }
-
-        return Ok(department);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
     }
 
     [HttpPost]
@@ -44,18 +39,11 @@ public class DepartmentController : ControllerBase
     {
         var result = await _service.AddAsync(dto);
 
-        if (result == "Bu departman zaten kayıtlı.")
-        {
-            return BadRequest(new
-            {
-                message = result
-            });
-        }
-
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            message = result
-        });
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result,
+            StatusCodes.Status201Created
+        );
     }
 
     [HttpDelete("{id}")]
@@ -63,22 +51,10 @@ public class DepartmentController : ControllerBase
     {
         var result = await _service.DeleteAsync(id);
 
-        if (result == "Departman bulunamadı.")
-        {
-            return NotFound(new
-            {
-                message = result
-            });
-        }
-
-        if (result == "Bu departmana bağlı stajyerler olduğu için departman silinemez.")
-        {
-            return BadRequest(new
-            {
-                message = result
-            });
-        }
-
-        return NoContent();
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result,
+            noContentOnSuccess: true
+        );
     }
 }

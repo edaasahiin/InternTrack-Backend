@@ -6,14 +6,26 @@ function InternForm({ onInternAdded }) {
     const [departmentId, setDepartmentId] = useState("");
     const [departments, setDepartments] = useState([]);
 
+    const [message, setMessage] = useState("");
+    const [isError, setIsError] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     useEffect(() => {
         fetch("http://localhost:5053/api/departments")
             .then(response => response.json())
-            .then(data => setDepartments(data));
+            .then(data => setDepartments(data))
+            .catch(() => {
+                setIsError(true);
+                setMessage("Departmanlar yüklenemedi.");
+            });
     }, []);
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
+
+        setMessage("");
+        setIsError(false);
+        setIsSubmitting(true);
 
         const newIntern = {
             name,
@@ -21,28 +33,56 @@ function InternForm({ onInternAdded }) {
             departmentId: Number(departmentId)
         };
 
-        fetch("http://localhost:5053/api/interns", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(newIntern)
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error("Stajyer eklenemedi.");
+        try {
+            const response = await fetch(
+                "http://localhost:5053/api/interns",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(newIntern)
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setIsError(true);
+
+                if (data.message) {
+                    setMessage(data.message);
+                } else if (data.errors) {
+                    const firstError = Object.values(data.errors)[0];
+
+                    if (Array.isArray(firstError)) {
+                        setMessage(firstError[0]);
+                    } else {
+                        setMessage("Girilen bilgiler geçersiz.");
+                    }
+                } else {
+                    setMessage("Stajyer eklenemedi.");
                 }
 
-                return response.text();
-            })
-            .then(() => {
-                setName("");
-                setEmail("");
-                setDepartmentId("");
+                return;
+            }
 
-                onInternAdded();
-            })
-            .catch(error => console.error(error));
+            setIsError(false);
+            setMessage(data.message || "Stajyer başarıyla eklendi.");
+
+            setName("");
+            setEmail("");
+            setDepartmentId("");
+
+            onInternAdded();
+        } catch (error) {
+            console.error(error);
+
+            setIsError(true);
+            setMessage("Sunucuya bağlanılamadı.");
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     return (
@@ -83,10 +123,25 @@ function InternForm({ onInternAdded }) {
                     ))}
                 </select>
 
-                <button type="submit">
-                    Stajyer Ekle
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? "Ekleniyor..." : "Stajyer Ekle"}
                 </button>
             </form>
+
+            {message && (
+                <p
+                    style={{
+                        marginTop: "10px",
+                        fontWeight: "bold"
+                    }}
+                >
+                    {isError ? "❌ " : "✅ "}
+                    {message}
+                </p>
+            )}
         </div>
     );
 }

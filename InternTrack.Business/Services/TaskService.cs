@@ -1,3 +1,4 @@
+using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Entities.DTOs;
@@ -23,18 +24,29 @@ public class TaskService : ITaskService
         return await _taskRepository.GetAllAsync();
     }
 
-    public async Task<TaskItem?> GetByIdAsync(int id)
+    public async Task<ServiceResult<TaskItem>> GetByIdAsync(int id)
     {
-        return await _taskRepository.GetByIdAsync(id);
+        var task = await _taskRepository.GetByIdAsync(id);
+
+        if (task == null)
+        {
+            return ServiceResult<TaskItem>.NotFound(
+                "Görev bulunamadı."
+            );
+        }
+
+        return ServiceResult<TaskItem>.Ok(task);
     }
 
-    public async Task<string> AddAsync(CreateTaskDto dto)
+    public async Task<ServiceResult> AddAsync(CreateTaskDto dto)
     {
         var intern = await _internRepository.GetByIdAsync(dto.InternId);
 
         if (intern == null)
         {
-            return "Stajyer bulunamadı.";
+            return ServiceResult.ValidationError(
+                "Stajyer bulunamadı."
+            );
         }
 
         var task = new TaskItem
@@ -47,23 +59,31 @@ public class TaskService : ITaskService
 
         await _taskRepository.AddAsync(task);
 
-        return "Görev oluşturuldu.";
+        return ServiceResult.Ok(
+            "Görev oluşturuldu."
+        );
     }
 
-    public async Task<string> UpdateAsync(int id, UpdateTaskDto dto)
+    public async Task<ServiceResult> UpdateAsync(
+        int id,
+        UpdateTaskDto dto)
     {
         var task = await _taskRepository.GetByIdAsync(id);
 
         if (task == null)
         {
-            return "Görev bulunamadı.";
+            return ServiceResult.NotFound(
+                "Görev bulunamadı."
+            );
         }
 
         var intern = await _internRepository.GetByIdAsync(dto.InternId);
 
         if (intern == null)
         {
-            return "Stajyer bulunamadı.";
+            return ServiceResult.ValidationError(
+                "Stajyer bulunamadı."
+            );
         }
 
         task.Title = dto.Title.Trim();
@@ -73,20 +93,26 @@ public class TaskService : ITaskService
 
         await _taskRepository.UpdateAsync(task);
 
-        return "Görev güncellendi.";
+        return ServiceResult.Ok(
+            "Görev güncellendi."
+        );
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
         var task = await _taskRepository.GetByIdAsync(id);
 
         if (task == null)
         {
-            return false;
+            return ServiceResult.NotFound(
+                "Görev bulunamadı."
+            );
         }
 
         await _taskRepository.DeleteAsync(task);
 
-        return true;
+        return ServiceResult.Ok(
+            "Görev silindi."
+        );
     }
 }

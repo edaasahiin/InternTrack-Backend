@@ -1,3 +1,4 @@
+using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Entities.DTOs;
@@ -23,20 +24,33 @@ public class DepartmentService : IDepartmentService
         return await _departmentRepository.GetAllAsync();
     }
 
-    public async Task<Department?> GetByIdAsync(int id)
+    public async Task<ServiceResult<Department>> GetByIdAsync(int id)
     {
-        return await _departmentRepository.GetByIdAsync(id);
+        var department =
+            await _departmentRepository.GetByIdAsync(id);
+
+        if (department == null)
+        {
+            return ServiceResult<Department>.NotFound(
+                "Departman bulunamadı."
+            );
+        }
+
+        return ServiceResult<Department>.Ok(department);
     }
 
-    public async Task<string> AddAsync(CreateDepartmentDto dto)
+    public async Task<ServiceResult> AddAsync(CreateDepartmentDto dto)
     {
         var departmentName = dto.Name.Trim();
 
-        var nameExists = await _departmentRepository.NameExistsAsync(departmentName);
+        var nameExists =
+            await _departmentRepository.NameExistsAsync(departmentName);
 
         if (nameExists)
         {
-            return "Bu departman zaten kayıtlı.";
+            return ServiceResult.Conflict(
+                "Bu departman zaten kayıtlı."
+            );
         }
 
         var department = new Department
@@ -46,27 +60,37 @@ public class DepartmentService : IDepartmentService
 
         await _departmentRepository.AddAsync(department);
 
-        return "Departman oluşturuldu.";
+        return ServiceResult.Ok(
+            "Departman oluşturuldu."
+        );
     }
 
-    public async Task<string> DeleteAsync(int id)
+    public async Task<ServiceResult> DeleteAsync(int id)
     {
-        var department = await _departmentRepository.GetByIdAsync(id);
+        var department =
+            await _departmentRepository.GetByIdAsync(id);
 
         if (department == null)
         {
-            return "Departman bulunamadı.";
+            return ServiceResult.NotFound(
+                "Departman bulunamadı."
+            );
         }
 
-        var hasInterns = await _internRepository.ExistsByDepartmentIdAsync(id);
+        var hasInterns =
+            await _internRepository.ExistsByDepartmentIdAsync(id);
 
         if (hasInterns)
         {
-            return "Bu departmana bağlı stajyerler olduğu için departman silinemez.";
+            return ServiceResult.Conflict(
+                "Bu departmana bağlı stajyerler olduğu için departman silinemez."
+            );
         }
 
         await _departmentRepository.DeleteAsync(department);
 
-        return "Departman silindi.";
+        return ServiceResult.Ok(
+            "Departman silindi."
+        );
     }
 }

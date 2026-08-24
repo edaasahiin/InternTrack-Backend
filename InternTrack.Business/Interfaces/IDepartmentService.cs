@@ -1,3 +1,4 @@
+using InternTrack.Business.Common;
 using InternTrack.Entities.DTOs;
 using InternTrack.Entities.Models;
 
@@ -7,9 +8,9 @@ public interface IDepartmentService
 {
     Task<List<Department>> GetAllAsync();
 
-    Task<Department?> GetByIdAsync(int id);
+    Task<ServiceResult<Department>> GetByIdAsync(int id);
 
-    Task<string> AddAsync(CreateDepartmentDto dto);
+    Task<ServiceResult> AddAsync(CreateDepartmentDto dto);
 
-    Task<string> DeleteAsync(int id);
+    Task<ServiceResult> DeleteAsync(int id);
 }

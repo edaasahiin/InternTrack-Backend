@@ -7,14 +7,27 @@ function TaskForm({ onTaskAdded }) {
     const [internId, setInternId] = useState("");
     const [interns, setInterns] = useState([]);
 
+    const [message, setMessage] = useState("");
+    const [isError, setIsError] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     useEffect(() => {
         fetch("http://localhost:5053/api/interns")
             .then(response => response.json())
-            .then(data => setInterns(data));
+            .then(data => setInterns(data))
+            .catch(error => {
+                console.error(error);
+                setIsError(true);
+                setMessage("Stajyerler yüklenemedi.");
+            });
     }, []);
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
         event.preventDefault();
+
+        setMessage("");
+        setIsError(false);
+        setIsSubmitting(true);
 
         const newTask = {
             title,
@@ -23,37 +36,64 @@ function TaskForm({ onTaskAdded }) {
             internId: Number(internId)
         };
 
-        fetch("http://localhost:5053/api/tasks", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(newTask)
-        })
-            .then(async response => {
-                const text = await response.text();
+        try {
+            const response = await fetch(
+                "http://localhost:5053/api/tasks",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(newTask)
+                }
+            );
 
-                console.log("STATUS:", response.status);
-                console.log("BACKEND CEVABI:", text);
+            let data = null;
 
-                if (!response.ok) {
-                    throw new Error(text || "Görev eklenemedi.");
+            try {
+                data = await response.json();
+            } catch {
+                data = null;
+            }
+
+            if (!response.ok) {
+                setIsError(true);
+
+                if (data?.message) {
+                    setMessage(data.message);
+                } else if (data?.errors) {
+                    const firstError = Object.values(data.errors)[0];
+
+                    if (Array.isArray(firstError)) {
+                        setMessage(firstError[0]);
+                    } else {
+                        setMessage("Girilen görev bilgileri geçersiz.");
+                    }
+                } else {
+                    setMessage("Görev eklenemedi.");
                 }
 
-                return text;
-            })
-            .then(() => {
-                setTitle("");
-                setDescription("");
-                setStatus("ToDo");
-                setInternId("");
+                return;
+            }
 
-                onTaskAdded();
-            })
-            .catch(error => {
-                console.error("GÖREV EKLEME HATASI:", error);
-            });
-    } // <-- EKSİK OLAN PARANTEZ BURASI
+            setIsError(false);
+            setMessage(data?.message || "Görev başarıyla eklendi.");
+
+            setTitle("");
+            setDescription("");
+            setStatus("ToDo");
+            setInternId("");
+
+            onTaskAdded();
+        } catch (error) {
+            console.error(error);
+
+            setIsError(true);
+            setMessage("Sunucuya bağlanılamadı.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
 
     return (
         <div>
@@ -90,16 +130,34 @@ function TaskForm({ onTaskAdded }) {
                     <option value="">Stajyer Seç</option>
 
                     {interns.map(intern => (
-                        <option key={intern.id} value={intern.id}>
+                        <option
+                            key={intern.id}
+                            value={intern.id}
+                        >
                             {intern.name}
                         </option>
                     ))}
                 </select>
 
-                <button type="submit">
-                    Görev Ekle
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? "Ekleniyor..." : "Görev Ekle"}
                 </button>
             </form>
+
+            {message && (
+                <p
+                    style={{
+                        marginTop: "10px",
+                        fontWeight: "bold"
+                    }}
+                >
+                    {isError ? "❌ " : "✅ "}
+                    {message}
+                </p>
+            )}
         </div>
     );
 }
