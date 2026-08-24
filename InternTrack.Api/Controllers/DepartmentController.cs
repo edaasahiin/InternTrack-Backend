@@ -53,13 +53,21 @@ public class DepartmentController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _service.DeleteAsync(id);
+        var result = await _service.DeleteAsync(id);
 
-        if (!deleted)
+        if (result == "Departman bulunamadı.")
         {
             return NotFound(new
             {
-                message = "Departman bulunamadı."
+                message = result
+            });
+        }
+
+        if (result == "Bu departmana bağlı stajyerler olduğu için departman silinemez.")
+        {
+            return BadRequest(new
+            {
+                message = result
             });
         }
 

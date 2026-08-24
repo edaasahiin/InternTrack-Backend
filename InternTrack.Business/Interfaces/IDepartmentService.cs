@@ -8,5 +8,5 @@ public interface IDepartmentService
     Task<List<Department>> GetAllAsync();
     Task<Department?> GetByIdAsync(int id);
     Task AddAsync(CreateDepartmentDto dto);
-    Task<bool> DeleteAsync(int id);
+    Task<string> DeleteAsync(int id);
 }

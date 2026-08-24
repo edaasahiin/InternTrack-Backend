@@ -7,44 +7,57 @@ namespace InternTrack.Business.Services;
 
 public class DepartmentService : IDepartmentService
 {
-    private readonly IDepartmentRepository _repository;
+    private readonly IDepartmentRepository _departmentRepository;
+    private readonly IInternRepository _internRepository;
 
-    public DepartmentService(IDepartmentRepository repository)
+    public DepartmentService(
+        IDepartmentRepository departmentRepository,
+        IInternRepository internRepository)
     {
-        _repository = repository;
+        _departmentRepository = departmentRepository;
+        _internRepository = internRepository;
     }
 
     public async Task<List<Department>> GetAllAsync()
     {
-        return await _repository.GetAllAsync();
+        return await _departmentRepository.GetAllAsync();
     }
 
     public async Task<Department?> GetByIdAsync(int id)
     {
-        return await _repository.GetByIdAsync(id);
+        return await _departmentRepository.GetByIdAsync(id);
     }
 
     public async Task AddAsync(CreateDepartmentDto dto)
     {
         var department = new Department
         {
-            Name = dto.Name
+            Name = dto.Name.Trim()
         };
 
-        await _repository.AddAsync(department);
+        await _departmentRepository.AddAsync(department);
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<string> DeleteAsync(int id)
     {
-        var department = await _repository.GetByIdAsync(id);
+        var department = await _departmentRepository.GetByIdAsync(id);
 
         if (department == null)
         {
-            return false;
+            return "Departman bulunamadı.";
         }
 
-        await _repository.DeleteAsync(department);
+        var interns = await _internRepository.GetAllAsync();
 
-        return true;
+        var hasInterns = interns.Any(x => x.DepartmentId == id);
+
+        if (hasInterns)
+        {
+            return "Bu departmana bağlı stajyerler olduğu için departman silinemez.";
+        }
+
+        await _departmentRepository.DeleteAsync(department);
+
+        return "Departman silindi.";
     }
 }
