@@ -1,5 +1,6 @@
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
+using InternTrack.Entities.DTOs;
 using InternTrack.Entities.Models;
 
 namespace InternTrack.Business.Services;
@@ -23,8 +24,13 @@ public class DepartmentService : IDepartmentService
         return await _repository.GetByIdAsync(id);
     }
 
-    public async Task AddAsync(Department department)
+    public async Task AddAsync(CreateDepartmentDto dto)
     {
+        var department = new Department
+        {
+            Name = dto.Name
+        };
+
         await _repository.AddAsync(department);
     }
 

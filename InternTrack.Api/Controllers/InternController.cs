@@ -1,5 +1,5 @@
 using InternTrack.Business.Interfaces;
-using InternTrack.Entities.Models;
+using InternTrack.Entities.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InternTrack.Api.Controllers;
@@ -36,9 +36,9 @@ public class InternController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Add(Intern intern)
+    public async Task<IActionResult> Add(CreateInternDto dto)
     {
-        var result = await _service.AddAsync(intern);
+        var result = await _service.AddAsync(dto);
 
         if (result == "Bu email adresi zaten kayıtlı.")
         {

@@ -1,5 +1,5 @@
 using InternTrack.Business.Interfaces;
-using InternTrack.Entities.Models;
+using InternTrack.Entities.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InternTrack.Api.Controllers;
@@ -36,16 +36,17 @@ public class TaskController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Add(TaskItem task)
+    public async Task<IActionResult> Add(CreateTaskDto dto)
     {
-        await _service.AddAsync(task);
-        return Ok(task);
+        await _service.AddAsync(dto);
+
+        return Ok("Görev eklendi.");
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, TaskItem updatedTask)
+    public async Task<IActionResult> Update(int id, UpdateTaskDto dto)
     {
-        var updated = await _service.UpdateAsync(id, updatedTask);
+        var updated = await _service.UpdateAsync(id, dto);
 
         if (!updated)
         {

@@ -1,5 +1,6 @@
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
+using InternTrack.Entities.DTOs;
 using InternTrack.Entities.Models;
 
 namespace InternTrack.Business.Services;
@@ -23,12 +24,20 @@ public class TaskService : ITaskService
         return await _repository.GetByIdAsync(id);
     }
 
-    public async Task AddAsync(TaskItem task)
+    public async Task AddAsync(CreateTaskDto dto)
     {
+        var task = new TaskItem
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            Status = dto.Status,
+            InternId = dto.InternId
+        };
+
         await _repository.AddAsync(task);
     }
 
-    public async Task<bool> UpdateAsync(int id, TaskItem updatedTask)
+    public async Task<bool> UpdateAsync(int id, UpdateTaskDto dto)
     {
         var task = await _repository.GetByIdAsync(id);
 
@@ -37,10 +46,10 @@ public class TaskService : ITaskService
             return false;
         }
 
-        task.Title = updatedTask.Title;
-        task.Description = updatedTask.Description;
-        task.Status = updatedTask.Status;
-        task.InternId = updatedTask.InternId;
+        task.Title = dto.Title;
+        task.Description = dto.Description;
+        task.Status = dto.Status;
+        task.InternId = dto.InternId;
 
         await _repository.UpdateAsync(task);
 

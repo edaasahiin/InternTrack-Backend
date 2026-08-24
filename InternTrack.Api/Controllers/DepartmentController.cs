@@ -1,5 +1,5 @@
 using InternTrack.Business.Interfaces;
-using InternTrack.Entities.Models;
+using InternTrack.Entities.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InternTrack.Api.Controllers;
@@ -36,10 +36,11 @@ public class DepartmentController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Add(Department department)
+    public async Task<IActionResult> Add(CreateDepartmentDto dto)
     {
-        await _service.AddAsync(department);
-        return Ok(department);
+        await _service.AddAsync(dto);
+
+        return Ok("Departman eklendi.");
     }
 
     [HttpDelete("{id}")]

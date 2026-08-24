@@ -1,5 +1,6 @@
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
+using InternTrack.Entities.DTOs;
 using InternTrack.Entities.Models;
 
 namespace InternTrack.Business.Services;
@@ -23,17 +24,24 @@ public class InternService : IInternService
         return await _repository.GetByIdAsync(id);
     }
 
-    public async Task<string> AddAsync(Intern intern)
+    public async Task<string> AddAsync(CreateInternDto dto)
     {
         var interns = await _repository.GetAllAsync();
 
         var existing = interns
-            .FirstOrDefault(x => x.Email == intern.Email);
+            .FirstOrDefault(x => x.Email == dto.Email);
 
         if (existing != null)
         {
             return "Bu email adresi zaten kayıtlı.";
         }
+
+        var intern = new Intern
+        {
+            Name = dto.Name,
+            Email = dto.Email,
+            DepartmentId = dto.DepartmentId
+        };
 
         await _repository.AddAsync(intern);
 
