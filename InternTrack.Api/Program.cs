@@ -4,6 +4,7 @@ using InternTrack.DataAccess;
 using InternTrack.DataAccess.Context;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.DataAccess.Repositories;
+using InternTrack.Api.Middleware;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,11 +42,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseCors("AllowFrontend");
 
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var dbContext =
+        scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
     await DbSeeder.SeedAsync(dbContext);
 }

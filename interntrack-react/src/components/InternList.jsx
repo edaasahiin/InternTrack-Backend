@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { api } from "../services/api";
+import AlertMessage from "./AlertMessage";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 function InternList({ interns, onInternDeleted }) {
     const [message, setMessage] = useState("");
@@ -9,39 +12,15 @@ function InternList({ interns, onInternDeleted }) {
         setIsError(false);
 
         try {
-            const response = await fetch(
-                `http://localhost:5053/api/interns/${id}`,
-                {
-                    method: "DELETE"
-                }
-            );
-
-            if (!response.ok) {
-                let data = null;
-
-                try {
-                    data = await response.json();
-                } catch {
-                    data = null;
-                }
-
-                setIsError(true);
-                setMessage(
-                    data?.message || "Stajyer silinemedi."
-                );
-
-                return;
-            }
+            await api.delete(`/interns/${id}`);
 
             setIsError(false);
             setMessage("Stajyer başarıyla silindi.");
 
             onInternDeleted();
         } catch (error) {
-            console.error(error);
-
             setIsError(true);
-            setMessage("Sunucuya bağlanılamadı.");
+            setMessage(getErrorMessage(error));
         }
     }
 
@@ -49,17 +28,10 @@ function InternList({ interns, onInternDeleted }) {
         <div>
             <h3>Stajyer Listesi</h3>
 
-            {message && (
-                <p
-                    style={{
-                        marginTop: "10px",
-                        fontWeight: "bold"
-                    }}
-                >
-                    {isError ? "❌ " : "✅ "}
-                    {message}
-                </p>
-            )}
+            <AlertMessage
+                message={message}
+                isError={isError}
+            />
 
             {interns.length === 0 ? (
                 <p>Henüz stajyer yok.</p>

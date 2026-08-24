@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { api } from "../services/api";
+import AlertMessage from "./AlertMessage";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 function InternForm({ onInternAdded }) {
     const [name, setName] = useState("");
@@ -11,13 +14,17 @@ function InternForm({ onInternAdded }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        fetch("http://localhost:5053/api/departments")
-            .then(response => response.json())
-            .then(data => setDepartments(data))
-            .catch(() => {
+        async function loadDepartments() {
+            try {
+                const data = await api.get("/departments");
+                setDepartments(data ?? []);
+            } catch (error) {
                 setIsError(true);
-                setMessage("Departmanlar yüklenemedi.");
-            });
+                setMessage(getErrorMessage(error));
+            }
+        }
+
+        loadDepartments();
     }, []);
 
     async function handleSubmit(event) {
@@ -34,41 +41,12 @@ function InternForm({ onInternAdded }) {
         };
 
         try {
-            const response = await fetch(
-                "http://localhost:5053/api/interns",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(newIntern)
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                setIsError(true);
-
-                if (data.message) {
-                    setMessage(data.message);
-                } else if (data.errors) {
-                    const firstError = Object.values(data.errors)[0];
-
-                    if (Array.isArray(firstError)) {
-                        setMessage(firstError[0]);
-                    } else {
-                        setMessage("Girilen bilgiler geçersiz.");
-                    }
-                } else {
-                    setMessage("Stajyer eklenemedi.");
-                }
-
-                return;
-            }
+            const data = await api.post("/interns", newIntern);
 
             setIsError(false);
-            setMessage(data.message || "Stajyer başarıyla eklendi.");
+            setMessage(
+                data?.message || "Stajyer başarıyla eklendi."
+            );
 
             setName("");
             setEmail("");
@@ -76,10 +54,8 @@ function InternForm({ onInternAdded }) {
 
             onInternAdded();
         } catch (error) {
-            console.error(error);
-
             setIsError(true);
-            setMessage("Sunucuya bağlanılamadı.");
+            setMessage(getErrorMessage(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -127,21 +103,16 @@ function InternForm({ onInternAdded }) {
                     type="submit"
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? "Ekleniyor..." : "Stajyer Ekle"}
+                    {isSubmitting
+                        ? "Ekleniyor..."
+                        : "Stajyer Ekle"}
                 </button>
             </form>
 
-            {message && (
-                <p
-                    style={{
-                        marginTop: "10px",
-                        fontWeight: "bold"
-                    }}
-                >
-                    {isError ? "❌ " : "✅ "}
-                    {message}
-                </p>
-            )}
+            <AlertMessage
+                message={message}
+                isError={isError}
+            />
         </div>
     );
 }

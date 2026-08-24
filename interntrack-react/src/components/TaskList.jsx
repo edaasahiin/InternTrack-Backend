@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { api } from "../services/api";
+import AlertMessage from "./AlertMessage";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 function TaskList({ tasks, onTaskChanged }) {
     const [message, setMessage] = useState("");
@@ -9,39 +12,15 @@ function TaskList({ tasks, onTaskChanged }) {
         setIsError(false);
 
         try {
-            const response = await fetch(
-                `http://localhost:5053/api/tasks/${id}`,
-                {
-                    method: "DELETE"
-                }
-            );
-
-            if (!response.ok) {
-                let data = null;
-
-                try {
-                    data = await response.json();
-                } catch {
-                    data = null;
-                }
-
-                setIsError(true);
-                setMessage(
-                    data?.message || "Görev silinemedi."
-                );
-
-                return;
-            }
+            await api.delete(`/tasks/${id}`);
 
             setIsError(false);
             setMessage("Görev başarıyla silindi.");
 
             onTaskChanged();
         } catch (error) {
-            console.error(error);
-
             setIsError(true);
-            setMessage("Sunucuya bağlanılamadı.");
+            setMessage(getErrorMessage(error));
         }
     }
 
@@ -57,33 +36,10 @@ function TaskList({ tasks, onTaskChanged }) {
         };
 
         try {
-            const response = await fetch(
-                `http://localhost:5053/api/tasks/${task.id}`,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(updatedTask)
-                }
+            const data = await api.put(
+                `/tasks/${task.id}`,
+                updatedTask
             );
-
-            let data = null;
-
-            try {
-                data = await response.json();
-            } catch {
-                data = null;
-            }
-
-            if (!response.ok) {
-                setIsError(true);
-                setMessage(
-                    data?.message || "Görev güncellenemedi."
-                );
-
-                return;
-            }
 
             setIsError(false);
             setMessage(
@@ -92,10 +48,8 @@ function TaskList({ tasks, onTaskChanged }) {
 
             onTaskChanged();
         } catch (error) {
-            console.error(error);
-
             setIsError(true);
-            setMessage("Sunucuya bağlanılamadı.");
+            setMessage(getErrorMessage(error));
         }
     }
 
@@ -103,17 +57,10 @@ function TaskList({ tasks, onTaskChanged }) {
         <div>
             <h3>Görev Listesi</h3>
 
-            {message && (
-                <p
-                    style={{
-                        marginTop: "10px",
-                        fontWeight: "bold"
-                    }}
-                >
-                    {isError ? "❌ " : "✅ "}
-                    {message}
-                </p>
-            )}
+            <AlertMessage
+                message={message}
+                isError={isError}
+            />
 
             {tasks.length === 0 ? (
                 <p>Henüz görev yok.</p>

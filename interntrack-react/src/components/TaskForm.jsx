@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { api } from "../services/api";
+import AlertMessage from "./AlertMessage";
+import { getErrorMessage } from "../utils/getErrorMessage";
 
 function TaskForm({ onTaskAdded }) {
     const [title, setTitle] = useState("");
@@ -12,14 +15,17 @@ function TaskForm({ onTaskAdded }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        fetch("http://localhost:5053/api/interns")
-            .then(response => response.json())
-            .then(data => setInterns(data))
-            .catch(error => {
-                console.error(error);
+        async function loadInterns() {
+            try {
+                const data = await api.get("/interns");
+                setInterns(data ?? []);
+            } catch (error) {
                 setIsError(true);
-                setMessage("Stajyerler yüklenemedi.");
-            });
+                setMessage(getErrorMessage(error));
+            }
+        }
+
+        loadInterns();
     }, []);
 
     async function handleSubmit(event) {
@@ -37,47 +43,12 @@ function TaskForm({ onTaskAdded }) {
         };
 
         try {
-            const response = await fetch(
-                "http://localhost:5053/api/tasks",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(newTask)
-                }
-            );
-
-            let data = null;
-
-            try {
-                data = await response.json();
-            } catch {
-                data = null;
-            }
-
-            if (!response.ok) {
-                setIsError(true);
-
-                if (data?.message) {
-                    setMessage(data.message);
-                } else if (data?.errors) {
-                    const firstError = Object.values(data.errors)[0];
-
-                    if (Array.isArray(firstError)) {
-                        setMessage(firstError[0]);
-                    } else {
-                        setMessage("Girilen görev bilgileri geçersiz.");
-                    }
-                } else {
-                    setMessage("Görev eklenemedi.");
-                }
-
-                return;
-            }
+            const data = await api.post("/tasks", newTask);
 
             setIsError(false);
-            setMessage(data?.message || "Görev başarıyla eklendi.");
+            setMessage(
+                data?.message || "Görev başarıyla eklendi."
+            );
 
             setTitle("");
             setDescription("");
@@ -86,10 +57,8 @@ function TaskForm({ onTaskAdded }) {
 
             onTaskAdded();
         } catch (error) {
-            console.error(error);
-
             setIsError(true);
-            setMessage("Sunucuya bağlanılamadı.");
+            setMessage(getErrorMessage(error));
         } finally {
             setIsSubmitting(false);
         }
@@ -143,21 +112,16 @@ function TaskForm({ onTaskAdded }) {
                     type="submit"
                     disabled={isSubmitting}
                 >
-                    {isSubmitting ? "Ekleniyor..." : "Görev Ekle"}
+                    {isSubmitting
+                        ? "Ekleniyor..."
+                        : "Görev Ekle"}
                 </button>
             </form>
 
-            {message && (
-                <p
-                    style={{
-                        marginTop: "10px",
-                        fontWeight: "bold"
-                    }}
-                >
-                    {isError ? "❌ " : "✅ "}
-                    {message}
-                </p>
-            )}
+            <AlertMessage
+                message={message}
+                isError={isError}
+            />
         </div>
     );
 }
