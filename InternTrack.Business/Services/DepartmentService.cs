@@ -1,13 +1,14 @@
-using InternTrack.DataAccess.Repositories;
+using InternTrack.Business.Interfaces;
+using InternTrack.DataAccess.Interfaces;
 using InternTrack.Entities.Models;
 
 namespace InternTrack.Business.Services;
 
-public class DepartmentService
+public class DepartmentService : IDepartmentService
 {
-    private readonly DepartmentRepository _repository;
+    private readonly IDepartmentRepository _repository;
 
-    public DepartmentService(DepartmentRepository repository)
+    public DepartmentService(IDepartmentRepository repository)
     {
         _repository = repository;
     }

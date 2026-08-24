@@ -1,4 +1,4 @@
-using InternTrack.Business.Services;
+using InternTrack.Business.Interfaces;
 using InternTrack.Entities.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,9 +8,9 @@ namespace InternTrack.Api.Controllers;
 [Route("api/departments")]
 public class DepartmentController : ControllerBase
 {
-    private readonly DepartmentService _service;
+    private readonly IDepartmentService _service;
 
-    public DepartmentController(DepartmentService service)
+    public DepartmentController(IDepartmentService service)
     {
         _service = service;
     }
@@ -39,7 +39,6 @@ public class DepartmentController : ControllerBase
     public async Task<IActionResult> Add(Department department)
     {
         await _service.AddAsync(department);
-
         return Ok(department);
     }
 

@@ -1,6 +1,8 @@
+using InternTrack.Business.Interfaces;
 using InternTrack.Business.Services;
 using InternTrack.DataAccess;
 using InternTrack.DataAccess.Context;
+using InternTrack.DataAccess.Interfaces;
 using InternTrack.DataAccess.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,13 +26,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=interntrack.db");
 });
 
-builder.Services.AddScoped<InternRepository>();
-builder.Services.AddScoped<TaskRepository>();
-builder.Services.AddScoped<DepartmentRepository>();
+builder.Services.AddScoped<IInternRepository, InternRepository>();
+builder.Services.AddScoped<ITaskRepository, TaskRepository>();
+builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 
-builder.Services.AddScoped<InternService>();
-builder.Services.AddScoped<TaskService>();
-builder.Services.AddScoped<DepartmentService>();
+builder.Services.AddScoped<IInternService, InternService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
 var app = builder.Build();
 

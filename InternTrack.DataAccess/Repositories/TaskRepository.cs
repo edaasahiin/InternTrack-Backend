@@ -1,10 +1,11 @@
 using InternTrack.DataAccess.Context;
+using InternTrack.DataAccess.Interfaces;
 using InternTrack.Entities.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace InternTrack.DataAccess.Repositories;
 
-public class TaskRepository
+public class TaskRepository : ITaskRepository
 {
     private readonly AppDbContext _db;
 

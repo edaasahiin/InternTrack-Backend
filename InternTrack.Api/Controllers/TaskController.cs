@@ -1,4 +1,4 @@
-using InternTrack.Business.Services;
+using InternTrack.Business.Interfaces;
 using InternTrack.Entities.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,9 +8,9 @@ namespace InternTrack.Api.Controllers;
 [Route("api/tasks")]
 public class TaskController : ControllerBase
 {
-    private readonly TaskService _service;
+    private readonly ITaskService _service;
 
-    public TaskController(TaskService service)
+    public TaskController(ITaskService service)
     {
         _service = service;
     }
@@ -39,7 +39,6 @@ public class TaskController : ControllerBase
     public async Task<IActionResult> Add(TaskItem task)
     {
         await _service.AddAsync(task);
-
         return Ok(task);
     }
 

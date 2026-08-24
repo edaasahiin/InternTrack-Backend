@@ -1,4 +1,4 @@
-using InternTrack.Business.Services;
+using InternTrack.Business.Interfaces;
 using InternTrack.Entities.Models;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,9 +8,9 @@ namespace InternTrack.Api.Controllers;
 [Route("api/interns")]
 public class InternController : ControllerBase
 {
-    private readonly InternService _service;
+    private readonly IInternService _service;
 
-    public InternController(InternService service)
+    public InternController(IInternService service)
     {
         _service = service;
     }

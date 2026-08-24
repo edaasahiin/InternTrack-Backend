@@ -1,13 +1,14 @@
-using InternTrack.DataAccess.Repositories;
+using InternTrack.Business.Interfaces;
+using InternTrack.DataAccess.Interfaces;
 using InternTrack.Entities.Models;
 
 namespace InternTrack.Business.Services;
 
-public class TaskService
+public class TaskService : ITaskService
 {
-    private readonly TaskRepository _repository;
+    private readonly ITaskRepository _repository;
 
-    public TaskService(TaskRepository repository)
+    public TaskService(ITaskRepository repository)
     {
         _repository = repository;
     }
