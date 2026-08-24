@@ -19,6 +19,7 @@ public class DepartmentController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var departments = await _service.GetAllAsync();
+
         return Ok(departments);
     }
 
@@ -29,7 +30,10 @@ public class DepartmentController : ControllerBase
 
         if (department == null)
         {
-            return NotFound("Departman bulunamadı.");
+            return NotFound(new
+            {
+                message = "Departman bulunamadı."
+            });
         }
 
         return Ok(department);
@@ -40,7 +44,10 @@ public class DepartmentController : ControllerBase
     {
         await _service.AddAsync(dto);
 
-        return Ok("Departman eklendi.");
+        return StatusCode(StatusCodes.Status201Created, new
+        {
+            message = "Departman oluşturuldu."
+        });
     }
 
     [HttpDelete("{id}")]
@@ -50,9 +57,12 @@ public class DepartmentController : ControllerBase
 
         if (!deleted)
         {
-            return NotFound("Departman bulunamadı.");
+            return NotFound(new
+            {
+                message = "Departman bulunamadı."
+            });
         }
 
-        return Ok("Departman silindi.");
+        return NoContent();
     }
 }

@@ -19,6 +19,7 @@ public class InternController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var interns = await _service.GetAllAsync();
+
         return Ok(interns);
     }
 
@@ -29,7 +30,10 @@ public class InternController : ControllerBase
 
         if (intern == null)
         {
-            return NotFound("Stajyer bulunamadı.");
+            return NotFound(new
+            {
+                message = "Stajyer bulunamadı."
+            });
         }
 
         return Ok(intern);
@@ -40,12 +44,26 @@ public class InternController : ControllerBase
     {
         var result = await _service.AddAsync(dto);
 
-        if (result == "Bu email adresi zaten kayıtlı.")
+        if (result == "Departman bulunamadı.")
         {
-            return BadRequest(result);
+            return BadRequest(new
+            {
+                message = result
+            });
         }
 
-        return Ok(result);
+        if (result == "Bu email adresi zaten kayıtlı.")
+        {
+            return BadRequest(new
+            {
+                message = result
+            });
+        }
+
+        return StatusCode(StatusCodes.Status201Created, new
+        {
+            message = result
+        });
     }
 
     [HttpDelete("{id}")]
@@ -55,9 +73,12 @@ public class InternController : ControllerBase
 
         if (!deleted)
         {
-            return NotFound("Stajyer bulunamadı.");
+            return NotFound(new
+            {
+                message = "Stajyer bulunamadı."
+            });
         }
 
-        return Ok("Stajyer silindi.");
+        return NoContent();
     }
 }
