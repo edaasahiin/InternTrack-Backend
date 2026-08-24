@@ -1,0 +1,12 @@
+@InternTrack.Api_HostAddress = http://localhost:5053
+
+POST {{InternTrack.Api_HostAddress}}/api/interns
+Content-Type: application/json
+
+{
+  "id": 3,
+  "name": "Ayşe",
+  "email": "ayse@example.com"
+}
+
+

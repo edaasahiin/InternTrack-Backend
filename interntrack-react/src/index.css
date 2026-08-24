@@ -1,0 +1,214 @@
+body {
+    margin: 0;
+    font-family: Inter, Arial, sans-serif;
+    background: #eef2f7;
+    color: #1f2937;
+}
+
+#root {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px;
+}
+
+/* NAVBAR */
+
+nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0f2a7a;
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    border-radius: 14px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+nav a {
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+nav a:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* BAŞLIKLAR */
+
+h1 {
+    font-size: 36px;
+    margin: 0 0 8px 0;
+    color: #0f2a7a;
+}
+
+h2 {
+    font-size: 27px;
+    margin-bottom: 22px;
+}
+
+h3 {
+    margin-top: 0;
+    color: #1f2937;
+}
+
+p {
+    color: #64748b;
+}
+
+/* ANA SAYFA HERO */
+
+.hero {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    margin-bottom: 35px;
+}
+
+.company-logo {
+    width: 180px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* DASHBOARD */
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.dashboard-card-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+.dashboard-card {
+    height: 100%;
+    box-sizing: border-box;
+    background: white;
+    padding: 26px;
+    border-radius: 16px;
+    border-top: 4px solid #0f2a7a;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+    transition: 0.2s;
+    cursor: pointer;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.1);
+}
+
+/* FORMLAR */
+
+form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 20px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
+}
+
+input,
+select {
+    flex: 1;
+    min-width: 170px;
+    padding: 12px 14px;
+    border: 1px solid #dbe1ea;
+    border-radius: 9px;
+    background: white;
+    font-size: 14px;
+    outline: none;
+}
+
+input:focus,
+select:focus {
+    border-color: #0f2a7a;
+    box-shadow: 0 0 0 3px rgba(15, 42, 122, 0.1);
+}
+
+/* BUTONLAR */
+
+button {
+    padding: 11px 17px;
+    border: none;
+    border-radius: 9px;
+    background: #0f2a7a;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background: #173a9c;
+    transform: translateY(-1px);
+}
+
+/* LİSTE KARTLARI */
+
+.intern-card,
+.task-card,
+.department-card {
+    background: white;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border-left: 4px solid #0f2a7a;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
+}
+
+.intern-card,
+.department-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.task-card strong {
+    font-size: 16px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+    #root {
+        padding: 18px;
+    }
+
+    nav {
+        flex-wrap: wrap;
+    }
+
+    .hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .company-logo {
+        width: 150px;
+    }
+
+    .dashboard {
+        grid-template-columns: 1fr;
+    }
+
+    form {
+        flex-direction: column;
+    }
+
+    input,
+    select,
+    button {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
