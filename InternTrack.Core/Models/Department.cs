@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace InternTrack.Entities.Models;
+namespace InternTrack.Core.Models;
 
 public class Department
 {

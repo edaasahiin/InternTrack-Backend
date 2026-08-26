@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace InternTrack.Entities.DTOs;
+namespace InternTrack.Core.DTOs;
 
 public class CreateInternDto
 {

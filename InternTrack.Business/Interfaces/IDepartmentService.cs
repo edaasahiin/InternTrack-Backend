@@ -1,6 +1,6 @@
 using InternTrack.Business.Common;
-using InternTrack.Entities.DTOs;
-using InternTrack.Entities.Models;
+using InternTrack.Core.DTOs;
+using InternTrack.Core.Models;
 
 namespace InternTrack.Business.Interfaces;
 

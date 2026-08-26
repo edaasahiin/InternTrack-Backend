@@ -1,4 +1,4 @@
-using InternTrack.Entities.Models;
+using InternTrack.Core.Models;
 
 namespace InternTrack.DataAccess.Interfaces;
 

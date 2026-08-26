@@ -1,6 +1,6 @@
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
-using InternTrack.Entities.DTOs;
+using InternTrack.Core.DTOs;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InternTrack.Api.Controllers;

@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\InternTrack.DataAccess\InternTrack.DataAccess.csproj" />
-    <ProjectReference Include="..\InternTrack.Entities\InternTrack.Entities.csproj" />
+    <ProjectReference Include="..\InternTrack.Core\InternTrack.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

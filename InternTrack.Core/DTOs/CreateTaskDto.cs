@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace InternTrack.Entities.DTOs;
+namespace InternTrack.Core.DTOs;
 
-public class UpdateTaskDto
+public class CreateTaskDto
 {
     [Required(ErrorMessage = "Görev başlığı zorunludur.")]
     [StringLength(150, MinimumLength = 2, ErrorMessage = "Görev başlığı 2 ile 150 karakter arasında olmalıdır.")]

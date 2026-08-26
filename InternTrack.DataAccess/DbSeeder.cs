@@ -1,5 +1,5 @@
 using InternTrack.DataAccess.Context;
-using InternTrack.Entities.Models;
+using InternTrack.Core.Models;
 
 namespace InternTrack.DataAccess;
 

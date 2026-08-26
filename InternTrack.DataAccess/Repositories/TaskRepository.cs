@@ -1,6 +1,6 @@
 using InternTrack.DataAccess.Context;
 using InternTrack.DataAccess.Interfaces;
-using InternTrack.Entities.Models;
+using InternTrack.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace InternTrack.DataAccess.Repositories;
