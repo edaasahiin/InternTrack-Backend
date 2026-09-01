@@ -3,4 +3,5 @@
   <Project Path="InternTrack.Business/InternTrack.Business.csproj" />
   <Project Path="InternTrack.Core/InternTrack.Core.csproj" />
   <Project Path="InternTrack.DataAccess/InternTrack.DataAccess.csproj" />
+  <Project Path="InternTrack.Infrastructure/InternTrack.Infrastructure.csproj" />
 </Solution>

@@ -1,6 +1,7 @@
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace InternTrack.Api.Controllers;
@@ -16,13 +17,16 @@ public class DepartmentController : ControllerBase
         _service = service;
     }
 
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var departments = await _service.GetAllAsync();
+
         return Ok(departments);
     }
 
+    [Authorize]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -34,6 +38,7 @@ public class DepartmentController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin,HR")]
     [HttpPost]
     public async Task<IActionResult> Add(CreateDepartmentDto dto)
     {
@@ -46,6 +51,7 @@ public class DepartmentController : ControllerBase
         );
     }
 
+    [Authorize(Roles = "Admin,HR")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

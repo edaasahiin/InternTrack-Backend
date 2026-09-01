@@ -19,28 +19,92 @@ public class TaskService : ITaskService
         _internRepository = internRepository;
     }
 
-    public async Task<List<TaskItem>> GetAllAsync()
+    public async Task<ServiceResult<List<TaskItem>>> GetAllAsync(
+        int userId,
+        string role)
     {
-        return await _taskRepository.GetAllAsync();
+        if (role == "Admin" || role == "HR")
+        {
+            var allTasks =
+                await _taskRepository.GetAllAsync();
+
+            return ServiceResult<List<TaskItem>>
+                .Ok(allTasks);
+        }
+
+        var intern =
+            await _internRepository.GetByUserIdAsync(
+                userId
+            );
+
+        if (intern == null)
+        {
+            return ServiceResult<List<TaskItem>>
+                .NotFound(
+                    "Stajyer profili bulunamadı."
+                );
+        }
+
+        var tasks =
+            await _taskRepository.GetByInternIdAsync(
+                intern.Id
+            );
+
+        return ServiceResult<List<TaskItem>>
+            .Ok(tasks);
     }
 
-    public async Task<ServiceResult<TaskItem>> GetByIdAsync(int id)
+    public async Task<ServiceResult<TaskItem>> GetByIdAsync(
+        int id,
+        int userId,
+        string role)
     {
-        var task = await _taskRepository.GetByIdAsync(id);
+        var task =
+            await _taskRepository.GetByIdAsync(id);
 
         if (task == null)
         {
-            return ServiceResult<TaskItem>.NotFound(
-                "Görev bulunamadı."
-            );
+            return ServiceResult<TaskItem>
+                .NotFound(
+                    "Görev bulunamadı."
+                );
         }
 
-        return ServiceResult<TaskItem>.Ok(task);
+        if (role == "Intern")
+        {
+            var intern =
+                await _internRepository.GetByUserIdAsync(
+                    userId
+                );
+
+            if (intern == null)
+            {
+                return ServiceResult<TaskItem>
+                    .NotFound(
+                        "Stajyer profili bulunamadı."
+                    );
+            }
+
+            if (task.InternId != intern.Id)
+            {
+                return ServiceResult<TaskItem>
+                    .Forbidden(
+                        "Bu göreve erişim yetkiniz yok."
+                    );
+            }
+        }
+
+        return ServiceResult<TaskItem>
+            .Ok(task);
     }
 
-    public async Task<ServiceResult> AddAsync(CreateTaskDto dto)
+    public async Task<ServiceResult> AddAsync(
+        CreateTaskDto dto)
     {
-        var intern = await _internRepository.GetByIdAsync(dto.InternId);
+        var intern =
+            await _internRepository.GetByIdAsync(
+                dto.InternId
+            );
 
         if (intern == null)
         {
@@ -52,7 +116,8 @@ public class TaskService : ITaskService
         var task = new TaskItem
         {
             Title = dto.Title.Trim(),
-            Description = dto.Description?.Trim(),
+            Description =
+                dto.Description?.Trim(),
             Status = dto.Status.Trim(),
             InternId = dto.InternId
         };
@@ -66,9 +131,12 @@ public class TaskService : ITaskService
 
     public async Task<ServiceResult> UpdateAsync(
         int id,
-        UpdateTaskDto dto)
+        UpdateTaskDto dto,
+        int userId,
+        string role)
     {
-        var task = await _taskRepository.GetByIdAsync(id);
+        var task =
+            await _taskRepository.GetByIdAsync(id);
 
         if (task == null)
         {
@@ -77,9 +145,42 @@ public class TaskService : ITaskService
             );
         }
 
-        var intern = await _internRepository.GetByIdAsync(dto.InternId);
+        if (role == "Intern")
+        {
+            var intern =
+                await _internRepository.GetByUserIdAsync(
+                    userId
+                );
 
-        if (intern == null)
+            if (intern == null)
+            {
+                return ServiceResult.NotFound(
+                    "Stajyer profili bulunamadı."
+                );
+            }
+
+            if (task.InternId != intern.Id)
+            {
+                return ServiceResult.Forbidden(
+                    "Bu görevi güncelleme yetkiniz yok."
+                );
+            }
+
+            task.Status = dto.Status.Trim();
+
+            await _taskRepository.UpdateAsync(task);
+
+            return ServiceResult.Ok(
+                "Görev durumu güncellendi."
+            );
+        }
+
+        var selectedIntern =
+            await _internRepository.GetByIdAsync(
+                dto.InternId
+            );
+
+        if (selectedIntern == null)
         {
             return ServiceResult.ValidationError(
                 "Stajyer bulunamadı."
@@ -87,7 +188,8 @@ public class TaskService : ITaskService
         }
 
         task.Title = dto.Title.Trim();
-        task.Description = dto.Description?.Trim();
+        task.Description =
+            dto.Description?.Trim();
         task.Status = dto.Status.Trim();
         task.InternId = dto.InternId;
 
@@ -100,7 +202,8 @@ public class TaskService : ITaskService
 
     public async Task<ServiceResult> DeleteAsync(int id)
     {
-        var task = await _taskRepository.GetByIdAsync(id);
+        var task =
+            await _taskRepository.GetByIdAsync(id);
 
         if (task == null)
         {

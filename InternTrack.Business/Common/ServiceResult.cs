@@ -47,4 +47,14 @@ public class ServiceResult
             Type = ResultType.Conflict
         };
     }
+
+    public static ServiceResult Forbidden(string message)
+    {
+        return new ServiceResult
+        {
+            Success = false,
+            Message = message,
+            Type = ResultType.Forbidden
+        };
+    }
 }

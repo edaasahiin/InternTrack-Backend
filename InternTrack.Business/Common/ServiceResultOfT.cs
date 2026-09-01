@@ -55,4 +55,15 @@ public class ServiceResult<T>
             Data = default
         };
     }
+
+    public static ServiceResult<T> Forbidden(string message)
+    {
+        return new ServiceResult<T>
+        {
+            Success = false,
+            Message = message,
+            Type = ResultType.Forbidden,
+            Data = default
+        };
+    }
 }

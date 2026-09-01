@@ -5,5 +5,6 @@ public enum ResultType
     Success,
     NotFound,
     ValidationError,
-    Conflict
+    Conflict,
+    Forbidden
 }

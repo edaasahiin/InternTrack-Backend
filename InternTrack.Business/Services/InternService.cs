@@ -19,14 +19,48 @@ public class InternService : IInternService
         _departmentRepository = departmentRepository;
     }
 
-    public async Task<List<Intern>> GetAllAsync()
+    public async Task<ServiceResult<List<Intern>>> GetAllAsync(
+        int userId,
+        string role)
     {
-        return await _internRepository.GetAllAsync();
+        if (role == "Admin" || role == "HR")
+        {
+            var interns =
+                await _internRepository.GetAllAsync();
+
+            return ServiceResult<List<Intern>>
+                .Ok(interns);
+        }
+
+        var intern =
+            await _internRepository.GetByUserIdAsync(
+                userId
+            );
+
+        if (intern == null)
+        {
+            return ServiceResult<List<Intern>>
+                .NotFound(
+                    "Stajyer profili bulunamadı."
+                );
+        }
+
+        var result = new List<Intern>
+        {
+            intern
+        };
+
+        return ServiceResult<List<Intern>>
+            .Ok(result);
     }
 
-    public async Task<ServiceResult<Intern>> GetByIdAsync(int id)
+    public async Task<ServiceResult<Intern>> GetByIdAsync(
+        int id,
+        int userId,
+        string role)
     {
-        var intern = await _internRepository.GetByIdAsync(id);
+        var intern =
+            await _internRepository.GetByIdAsync(id);
 
         if (intern == null)
         {
@@ -35,13 +69,40 @@ public class InternService : IInternService
             );
         }
 
-        return ServiceResult<Intern>.Ok(intern);
+        if (role == "Intern")
+        {
+            var currentIntern =
+                await _internRepository.GetByUserIdAsync(
+                    userId
+                );
+
+            if (currentIntern == null)
+            {
+                return ServiceResult<Intern>.NotFound(
+                    "Stajyer profili bulunamadı."
+                );
+            }
+
+            if (currentIntern.Id != intern.Id)
+            {
+                return ServiceResult<Intern>.Forbidden(
+                    "Bu stajyer profiline erişim yetkiniz yok."
+                );
+            }
+        }
+
+        return ServiceResult<Intern>.Ok(
+            intern
+        );
     }
 
-    public async Task<ServiceResult> AddAsync(CreateInternDto dto)
+    public async Task<ServiceResult> AddAsync(
+        CreateInternDto dto)
     {
         var department =
-            await _departmentRepository.GetByIdAsync(dto.DepartmentId);
+            await _departmentRepository.GetByIdAsync(
+                dto.DepartmentId
+            );
 
         if (department == null)
         {
@@ -51,7 +112,9 @@ public class InternService : IInternService
         }
 
         var emailExists =
-            await _internRepository.EmailExistsAsync(dto.Email.Trim());
+            await _internRepository.EmailExistsAsync(
+                dto.Email.Trim()
+            );
 
         if (emailExists)
         {
@@ -67,16 +130,20 @@ public class InternService : IInternService
             DepartmentId = dto.DepartmentId
         };
 
-        await _internRepository.AddAsync(intern);
+        await _internRepository.AddAsync(
+            intern
+        );
 
         return ServiceResult.Ok(
             "Stajyer eklendi."
         );
     }
 
-    public async Task<ServiceResult> DeleteAsync(int id)
+    public async Task<ServiceResult> DeleteAsync(
+        int id)
     {
-        var intern = await _internRepository.GetByIdAsync(id);
+        var intern =
+            await _internRepository.GetByIdAsync(id);
 
         if (intern == null)
         {
@@ -85,7 +152,9 @@ public class InternService : IInternService
             );
         }
 
-        await _internRepository.DeleteAsync(intern);
+        await _internRepository.DeleteAsync(
+            intern
+        );
 
         return ServiceResult.Ok(
             "Stajyer silindi."

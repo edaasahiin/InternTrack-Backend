@@ -6,13 +6,29 @@ namespace InternTrack.Business.Interfaces;
 
 public interface ITaskService
 {
-    Task<List<TaskItem>> GetAllAsync();
+    Task<ServiceResult<List<TaskItem>>> GetAllAsync(
+        int userId,
+        string role
+    );
 
-    Task<ServiceResult<TaskItem>> GetByIdAsync(int id);
+    Task<ServiceResult<TaskItem>> GetByIdAsync(
+        int id,
+        int userId,
+        string role
+    );
 
-    Task<ServiceResult> AddAsync(CreateTaskDto dto);
+    Task<ServiceResult> AddAsync(
+        CreateTaskDto dto
+    );
 
-    Task<ServiceResult> UpdateAsync(int id, UpdateTaskDto dto);
+    Task<ServiceResult> UpdateAsync(
+        int id,
+        UpdateTaskDto dto,
+        int userId,
+        string role
+    );
 
-    Task<ServiceResult> DeleteAsync(int id);
+    Task<ServiceResult> DeleteAsync(
+        int id
+    );
 }

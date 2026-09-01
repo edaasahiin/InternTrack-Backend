@@ -41,6 +41,11 @@ public static class ServiceResultMapper
                 new { message = result.Message }
             ),
 
+            ResultType.Forbidden => controller.StatusCode(
+                StatusCodes.Status403Forbidden,
+                new { message = result.Message }
+            ),
+
             _ => controller.BadRequest(
                 new { message = result.Message }
             )
@@ -67,6 +72,11 @@ public static class ServiceResultMapper
             ),
 
             ResultType.Conflict => controller.Conflict(
+                new { message = result.Message }
+            ),
+
+            ResultType.Forbidden => controller.StatusCode(
+                StatusCodes.Status403Forbidden,
                 new { message = result.Message }
             ),
 

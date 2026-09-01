@@ -8,6 +8,8 @@ public interface IInternRepository
 
     Task<Intern?> GetByIdAsync(int id);
 
+    Task<Intern?> GetByUserIdAsync(int userId);
+
     Task<bool> EmailExistsAsync(string email);
 
     Task<bool> ExistsByDepartmentIdAsync(int departmentId);

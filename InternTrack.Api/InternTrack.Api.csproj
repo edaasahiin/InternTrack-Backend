@@ -1,12 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>e6f3faeb-9036-4413-aee6-4d13aebd2f51</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.11">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -19,6 +21,7 @@
     <ProjectReference Include="..\InternTrack.Business\InternTrack.Business.csproj" />
     <ProjectReference Include="..\InternTrack.DataAccess\InternTrack.DataAccess.csproj" />
     <ProjectReference Include="..\InternTrack.Core\InternTrack.Core.csproj" />
+    <ProjectReference Include="..\InternTrack.Infrastructure\InternTrack.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
