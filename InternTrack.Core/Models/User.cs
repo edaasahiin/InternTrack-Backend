@@ -16,4 +16,7 @@ public class User
 
     [JsonIgnore]
     public Intern? Intern { get; set; }
+
+    [JsonIgnore]
+    public List<RefreshToken> RefreshTokens { get; set; } = new();
 }

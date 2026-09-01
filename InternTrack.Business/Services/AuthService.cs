@@ -54,7 +54,6 @@ public class AuthService : IAuthService
             Email = dto.Email.Trim(),
             PasswordHash =
                 PasswordHasher.Hash(dto.Password),
-
             Role = "Intern"
         };
 
@@ -105,12 +104,16 @@ public class AuthService : IAuthService
                 );
         }
 
-        var token =
-            _tokenService.CreateToken(user);
+        var accessToken =
+            _tokenService.CreateAccessToken(user);
+
+        var refreshToken =
+            _tokenService.CreateRefreshToken();
 
         var response = new LoginResponseDto
         {
-            Token = token,
+            Token = accessToken,
+            RefreshToken = refreshToken,
             Name = user.Name,
             Email = user.Email,
             Role = user.Role

@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.Models;
@@ -17,16 +18,28 @@ public class JwtTokenService : ITokenService
         _configuration = configuration;
     }
 
-    public string CreateToken(User user)
+    public string CreateAccessToken(User user)
     {
         var key = _configuration["Jwt:Key"];
         var issuer = _configuration["Jwt:Issuer"];
         var audience = _configuration["Jwt:Audience"];
 
+        var accessTokenMinutes =
+            _configuration.GetValue<int>(
+                "Jwt:AccessTokenMinutes"
+            );
+
         if (string.IsNullOrWhiteSpace(key))
         {
             throw new InvalidOperationException(
                 "JWT anahtarı bulunamadı."
+            );
+        }
+
+        if (accessTokenMinutes <= 0)
+        {
+            throw new InvalidOperationException(
+                "Access token süresi geçerli değil."
             );
         }
 
@@ -65,11 +78,23 @@ public class JwtTokenService : ITokenService
             issuer: issuer,
             audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(1),
+            expires: DateTime.UtcNow.AddMinutes(
+                accessTokenMinutes
+            ),
             signingCredentials: credentials
         );
 
         return new JwtSecurityTokenHandler()
             .WriteToken(token);
+    }
+
+    public string CreateRefreshToken()
+    {
+        var randomBytes =
+            RandomNumberGenerator.GetBytes(64);
+
+        return Convert.ToBase64String(
+            randomBytes
+        );
     }
 }
