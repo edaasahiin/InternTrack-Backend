@@ -21,9 +21,10 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .AllowAnyOrigin()
+            .WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -37,6 +38,10 @@ builder.Services.AddScoped<IInternRepository, InternRepository>();
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<
+    IRefreshTokenRepository,
+    RefreshTokenRepository
+>();
 
 // Service Dependency Injection
 builder.Services.AddScoped<IInternService, InternService>();
@@ -93,6 +98,8 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseCors("AllowFrontend");
+
+app.UseMiddleware<TokenCookieMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
