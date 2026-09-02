@@ -145,7 +145,7 @@ public class AuthService : IAuthService
 
         var response = new LoginResponseDto
         {
-            Token = accessToken,
+            AccessToken = accessToken,
             RefreshToken = refreshTokenValue,
             Name = user.Name,
             Email = user.Email,
@@ -239,7 +239,7 @@ public class AuthService : IAuthService
 
         var response = new LoginResponseDto
         {
-            Token = newAccessToken,
+            AccessToken = newAccessToken,
             RefreshToken = newRefreshTokenValue,
             Name = storedRefreshToken.User.Name,
             Email = storedRefreshToken.User.Email,

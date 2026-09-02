@@ -42,6 +42,10 @@ builder.Services.AddScoped<
     IRefreshTokenRepository,
     RefreshTokenRepository
 >();
+builder.Services.AddScoped<
+    IDashboardService,
+    DashboardService
+>();
 
 // Service Dependency Injection
 builder.Services.AddScoped<IInternService, InternService>();

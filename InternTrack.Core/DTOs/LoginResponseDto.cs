@@ -2,7 +2,7 @@ namespace InternTrack.Core.DTOs;
 
 public class LoginResponseDto
 {
-    public required string Token { get; set; }
+    public required string AccessToken { get; set; }
 
     public required string RefreshToken { get; set; }
 

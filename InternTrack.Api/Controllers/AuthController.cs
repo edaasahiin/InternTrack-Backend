@@ -159,7 +159,7 @@ public class AuthController : ControllerBase
 
         Response.Cookies.Append(
             "accessToken",
-            response.Token,
+            response.AccessToken,
             new CookieOptions
             {
                 HttpOnly = true,
