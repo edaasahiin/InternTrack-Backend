@@ -2,6 +2,7 @@ using System.Security.Claims;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
+using InternTrack.DataAccess.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,13 +13,16 @@ namespace InternTrack.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
 
     public AuthController(
         IAuthService authService,
+        IUserRepository userRepository,
         IConfiguration configuration)
     {
         _authService = authService;
+        _userRepository = userRepository;
         _configuration = configuration;
     }
 
@@ -54,6 +58,8 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             name = result.Data.Name,
+            surname = result.Data.Surname,
+            avatar = result.Data.Avatar,
             email = result.Data.Email,
             role = result.Data.Role
         });
@@ -61,29 +67,72 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
-    public IActionResult Me()
+    public async Task<IActionResult> Me()
     {
-        var name =
+        var userIdClaim =
             User.FindFirstValue(
-                ClaimTypes.Name
+                ClaimTypes.NameIdentifier
             );
 
-        var email =
-            User.FindFirstValue(
-                ClaimTypes.Email
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Kullanıcı bilgisi doğrulanamadı."
+            });
+        }
+
+        var user =
+            await _userRepository.GetByIdAsync(
+                userId
             );
 
-        var role =
-            User.FindFirstValue(
-                ClaimTypes.Role
-            );
+        if (user == null)
+        {
+            return Unauthorized(new
+            {
+                message = "Kullanıcı bulunamadı."
+            });
+        }
 
         return Ok(new
         {
-            name,
-            email,
-            role
+            name = user.Name,
+            surname = user.Surname,
+            avatar = user.Avatar,
+            email = user.Email,
+            role = user.Role
         });
+    }
+
+    [Authorize]
+    [HttpPut("avatar")]
+    public async Task<IActionResult> UpdateAvatar(
+        UpdateAvatarDto dto)
+    {
+        var userIdClaim =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier
+            );
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Kullanıcı bilgisi doğrulanamadı."
+            });
+        }
+
+        var result =
+            await _authService.UpdateAvatarAsync(
+                userId,
+                dto.Avatar
+            );
+
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
     }
 
     [HttpPost("refresh")]
@@ -118,6 +167,8 @@ public class AuthController : ControllerBase
         return Ok(new
         {
             name = result.Data.Name,
+            surname = result.Data.Surname,
+            avatar = result.Data.Avatar,
             email = result.Data.Email,
             role = result.Data.Role
         });

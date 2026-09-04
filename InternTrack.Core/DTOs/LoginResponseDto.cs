@@ -8,6 +8,10 @@ public class LoginResponseDto
 
     public required string Name { get; set; }
 
+    public string Surname { get; set; } = "";
+
+    public string? Avatar { get; set; }
+
     public required string Email { get; set; }
 
     public required string Role { get; set; }

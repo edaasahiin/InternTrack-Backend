@@ -8,6 +8,8 @@ public class Intern
 
     public required string Name { get; set; }
 
+    public string Surname { get; set; } = "";
+
     public required string Email { get; set; }
 
     public int DepartmentId { get; set; }

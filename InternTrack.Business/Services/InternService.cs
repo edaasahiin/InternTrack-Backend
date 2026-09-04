@@ -126,6 +126,7 @@ public class InternService : IInternService
         var intern = new Intern
         {
             Name = dto.Name.Trim(),
+            Surname = dto.Surname.Trim(),
             Email = dto.Email.Trim(),
             DepartmentId = dto.DepartmentId
         };

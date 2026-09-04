@@ -18,4 +18,9 @@ public interface IAuthService
     Task<ServiceResult> LogoutAsync(
         string refreshToken
     );
+
+    Task<ServiceResult> UpdateAvatarAsync(
+        int userId,
+        string? avatar
+    );
 }

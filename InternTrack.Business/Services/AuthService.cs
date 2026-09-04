@@ -58,6 +58,7 @@ public class AuthService : IAuthService
         var user = new User
         {
             Name = dto.Name.Trim(),
+            Surname = dto.Surname.Trim(),
             Email = dto.Email.Trim(),
             PasswordHash =
                 PasswordHasher.Hash(dto.Password),
@@ -67,6 +68,7 @@ public class AuthService : IAuthService
         var intern = new Intern
         {
             Name = dto.Name.Trim(),
+            Surname = dto.Surname.Trim(),
             Email = dto.Email.Trim(),
             DepartmentId = dto.DepartmentId,
             User = user
@@ -148,6 +150,8 @@ public class AuthService : IAuthService
             AccessToken = accessToken,
             RefreshToken = refreshTokenValue,
             Name = user.Name,
+            Surname = user.Surname,
+            Avatar = user.Avatar,
             Email = user.Email,
             Role = user.Role
         };
@@ -242,6 +246,8 @@ public class AuthService : IAuthService
             AccessToken = newAccessToken,
             RefreshToken = newRefreshTokenValue,
             Name = storedRefreshToken.User.Name,
+            Surname = storedRefreshToken.User.Surname,
+            Avatar = storedRefreshToken.User.Avatar,
             Email = storedRefreshToken.User.Email,
             Role = storedRefreshToken.User.Role
         };
@@ -281,6 +287,34 @@ public class AuthService : IAuthService
 
         return ServiceResult.Ok(
             "Çıkış başarılı."
+        );
+    }
+
+    public async Task<ServiceResult> UpdateAvatarAsync(
+        int userId,
+        string? avatar)
+    {
+        var user =
+            await _userRepository.GetByIdAsync(
+                userId
+            );
+
+        if (user == null)
+        {
+            return ServiceResult.ValidationError(
+                "Kullanıcı bulunamadı."
+            );
+        }
+
+        user.Avatar =
+            string.IsNullOrWhiteSpace(avatar)
+                ? null
+                : avatar.Trim();
+
+        await _userRepository.UpdateAsync(user);
+
+        return ServiceResult.Ok(
+            "Avatar başarıyla güncellendi."
         );
     }
 }
