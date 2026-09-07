@@ -24,6 +24,13 @@ public class CreateInternDto
     [EmailAddress(ErrorMessage = "Geçerli bir email adresi giriniz.")]
     public required string Email { get; set; }
 
+    [Required(ErrorMessage = "Geçici şifre alanı zorunludur.")]
+    [MinLength(
+        6,
+        ErrorMessage = "Geçici şifre en az 6 karakter olmalıdır."
+    )]
+    public required string Password { get; set; }
+
     [Range(
         1,
         int.MaxValue,

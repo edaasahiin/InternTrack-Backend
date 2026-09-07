@@ -10,13 +10,16 @@ public class InternService : IInternService
 {
     private readonly IInternRepository _internRepository;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly IUserRepository _userRepository;
 
     public InternService(
         IInternRepository internRepository,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        IUserRepository userRepository)
     {
         _internRepository = internRepository;
         _departmentRepository = departmentRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<ServiceResult<List<Intern>>> GetAllAsync(
@@ -111,32 +114,55 @@ public class InternService : IInternService
             );
         }
 
-        var emailExists =
-            await _internRepository.EmailExistsAsync(
+        var userEmailExists =
+            await _userRepository.EmailExistsAsync(
                 dto.Email.Trim()
             );
 
-        if (emailExists)
+        if (userEmailExists)
         {
             return ServiceResult.Conflict(
                 "Bu email adresi zaten kayıtlı."
             );
         }
 
+        var internEmailExists =
+            await _internRepository.EmailExistsAsync(
+                dto.Email.Trim()
+            );
+
+        if (internEmailExists)
+        {
+            return ServiceResult.Conflict(
+                "Bu email adresine ait stajyer kaydı zaten mevcut."
+            );
+        }
+
+        var user = new User
+        {
+            Name = dto.Name.Trim(),
+            Surname = dto.Surname.Trim(),
+            Email = dto.Email.Trim(),
+            PasswordHash =
+                PasswordHasher.Hash(dto.Password),
+            Role = "Intern"
+        };
+
         var intern = new Intern
         {
             Name = dto.Name.Trim(),
             Surname = dto.Surname.Trim(),
             Email = dto.Email.Trim(),
-            DepartmentId = dto.DepartmentId
+            DepartmentId = dto.DepartmentId,
+            User = user
         };
 
-        await _internRepository.AddAsync(
-            intern
-        );
+        user.Intern = intern;
+
+        await _userRepository.AddAsync(user);
 
         return ServiceResult.Ok(
-            "Stajyer eklendi."
+            "Stajyer ve kullanıcı hesabı başarıyla oluşturuldu."
         );
     }
 
