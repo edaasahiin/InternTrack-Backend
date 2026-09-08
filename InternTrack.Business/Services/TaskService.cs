@@ -99,17 +99,53 @@ public class TaskService : ITaskService
     }
 
     public async Task<ServiceResult> AddAsync(
-        CreateTaskDto dto)
+        CreateTaskDto dto,
+        int userId,
+        string role)
     {
-        var intern =
-            await _internRepository.GetByIdAsync(
-                dto.InternId
-            );
+        int internId;
 
-        if (intern == null)
+        if (role == "Intern")
         {
-            return ServiceResult.ValidationError(
-                "Stajyer bulunamadı."
+            var currentIntern =
+                await _internRepository.GetByUserIdAsync(
+                    userId
+                );
+
+            if (currentIntern == null)
+            {
+                return ServiceResult.NotFound(
+                    "Stajyer profili bulunamadı."
+                );
+            }
+
+            internId =
+                currentIntern.Id;
+        }
+        else if (
+            role == "Admin" ||
+            role == "HR"
+        )
+        {
+            var selectedIntern =
+                await _internRepository.GetByIdAsync(
+                    dto.InternId
+                );
+
+            if (selectedIntern == null)
+            {
+                return ServiceResult.ValidationError(
+                    "Stajyer bulunamadı."
+                );
+            }
+
+            internId =
+                selectedIntern.Id;
+        }
+        else
+        {
+            return ServiceResult.Forbidden(
+                "Bu işlem için yetkiniz yok."
             );
         }
 
@@ -119,7 +155,19 @@ public class TaskService : ITaskService
             Description =
                 dto.Description?.Trim(),
             Status = dto.Status.Trim(),
-            InternId = dto.InternId
+            InternId = internId,
+            CreatedByUserId = userId,
+
+            CanInternDeleteWhenCompleted =
+                role == "Admin" ||
+                role == "HR"
+                    ? dto.CanInternDeleteWhenCompleted
+                    : false,
+
+            CompletedAt =
+                dto.Status.Trim() == "Done"
+                    ? DateTime.UtcNow
+                    : null
         };
 
         await _taskRepository.AddAsync(task);
@@ -166,12 +214,43 @@ public class TaskService : ITaskService
                 );
             }
 
-            task.Status = dto.Status.Trim();
+            var newStatus =
+                dto.Status.Trim();
 
-            await _taskRepository.UpdateAsync(task);
+            if (
+                task.Status != "Done" &&
+                newStatus == "Done"
+            )
+            {
+                task.CompletedAt =
+                    DateTime.UtcNow;
+            }
+
+            if (newStatus != "Done")
+            {
+                task.CompletedAt =
+                    null;
+            }
+
+            task.Status =
+                newStatus;
+
+            await _taskRepository.UpdateAsync(
+                task
+            );
 
             return ServiceResult.Ok(
                 "Görev durumu güncellendi."
+            );
+        }
+
+        if (
+            role != "Admin" &&
+            role != "HR"
+        )
+        {
+            return ServiceResult.Forbidden(
+                "Bu işlem için yetkiniz yok."
             );
         }
 
@@ -187,20 +266,52 @@ public class TaskService : ITaskService
             );
         }
 
-        task.Title = dto.Title.Trim();
+        var newAdminStatus =
+            dto.Status.Trim();
+
+        if (
+            task.Status != "Done" &&
+            newAdminStatus == "Done"
+        )
+        {
+            task.CompletedAt =
+                DateTime.UtcNow;
+        }
+
+        if (newAdminStatus != "Done")
+        {
+            task.CompletedAt =
+                null;
+        }
+
+        task.Title =
+            dto.Title.Trim();
+
         task.Description =
             dto.Description?.Trim();
-        task.Status = dto.Status.Trim();
-        task.InternId = dto.InternId;
 
-        await _taskRepository.UpdateAsync(task);
+        task.Status =
+            newAdminStatus;
+
+        task.InternId =
+            dto.InternId;
+
+        task.CanInternDeleteWhenCompleted =
+            dto.CanInternDeleteWhenCompleted;
+
+        await _taskRepository.UpdateAsync(
+            task
+        );
 
         return ServiceResult.Ok(
             "Görev güncellendi."
         );
     }
 
-    public async Task<ServiceResult> DeleteAsync(int id)
+    public async Task<ServiceResult> DeleteAsync(
+        int id,
+        int userId,
+        string role)
     {
         var task =
             await _taskRepository.GetByIdAsync(id);
@@ -212,7 +323,67 @@ public class TaskService : ITaskService
             );
         }
 
-        await _taskRepository.DeleteAsync(task);
+        if (role == "Intern")
+        {
+            var intern =
+                await _internRepository.GetByUserIdAsync(
+                    userId
+                );
+
+            if (intern == null)
+            {
+                return ServiceResult.NotFound(
+                    "Stajyer profili bulunamadı."
+                );
+            }
+
+            if (task.InternId != intern.Id)
+            {
+                return ServiceResult.Forbidden(
+                    "Bu görevi silme yetkiniz yok."
+                );
+            }
+
+            var createdByCurrentIntern =
+                task.CreatedByUserId == userId;
+
+            if (createdByCurrentIntern)
+            {
+                await _taskRepository.DeleteAsync(
+                    task
+                );
+
+                return ServiceResult.Ok(
+                    "Görev silindi."
+                );
+            }
+
+            var isCompleted =
+                task.Status == "Done";
+
+            if (
+                !isCompleted ||
+                !task.CanInternDeleteWhenCompleted
+            )
+            {
+                return ServiceResult.Forbidden(
+                    "Bu görevi silme yetkiniz yok."
+                );
+            }
+        }
+        else if (
+            role != "Admin" &&
+            role != "HR"
+        )
+        {
+            return ServiceResult.Forbidden(
+                "Bu işlem için yetkiniz yok."
+            );
+        }
+
+        await _taskRepository.DeleteAsync(
+            task
+        );
 
         return ServiceResult.Ok(
             "Görev silindi."

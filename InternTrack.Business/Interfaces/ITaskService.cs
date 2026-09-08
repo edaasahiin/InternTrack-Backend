@@ -18,7 +18,9 @@ public interface ITaskService
     );
 
     Task<ServiceResult> AddAsync(
-        CreateTaskDto dto
+        CreateTaskDto dto,
+        int userId,
+        string role
     );
 
     Task<ServiceResult> UpdateAsync(
@@ -29,6 +31,8 @@ public interface ITaskService
     );
 
     Task<ServiceResult> DeleteAsync(
-        int id
+        int id,
+        int userId,
+        string role
     );
 }

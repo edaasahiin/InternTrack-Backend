@@ -54,11 +54,18 @@ public class TaskController : ControllerBase
         );
     }
 
-    [Authorize(Roles = "Admin,HR")]
     [HttpPost]
-    public async Task<IActionResult> Add(CreateTaskDto dto)
+    public async Task<IActionResult> Add(
+        CreateTaskDto dto)
     {
-        var result = await _service.AddAsync(dto);
+        var userId = GetCurrentUserId();
+        var role = GetCurrentUserRole();
+
+        var result = await _service.AddAsync(
+            dto,
+            userId,
+            role
+        );
 
         return ServiceResultMapper.ToActionResult(
             this,
@@ -88,11 +95,17 @@ public class TaskController : ControllerBase
         );
     }
 
-    [Authorize(Roles = "Admin,HR")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await _service.DeleteAsync(id);
+        var userId = GetCurrentUserId();
+        var role = GetCurrentUserRole();
+
+        var result = await _service.DeleteAsync(
+            id,
+            userId,
+            role
+        );
 
         return ServiceResultMapper.ToActionResult(
             this,
