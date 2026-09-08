@@ -15,4 +15,6 @@ public class LoginResponseDto
     public required string Email { get; set; }
 
     public required string Role { get; set; }
+
+    public bool MustChangePassword { get; set; }
 }

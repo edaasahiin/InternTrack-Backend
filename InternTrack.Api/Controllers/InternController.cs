@@ -56,9 +56,11 @@ public class InternController : ControllerBase
 
     [Authorize(Roles = "Admin,HR")]
     [HttpPost]
-    public async Task<IActionResult> Add(CreateInternDto dto)
+    public async Task<IActionResult> Add(
+        CreateInternDto dto)
     {
-        var result = await _service.AddAsync(dto);
+        var result =
+            await _service.AddAsync(dto);
 
         return ServiceResultMapper.ToActionResult(
             this,
@@ -68,10 +70,29 @@ public class InternController : ControllerBase
     }
 
     [Authorize(Roles = "Admin,HR")]
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(
+        int id,
+        UpdateInternDto dto)
+    {
+        var result =
+            await _service.UpdateAsync(
+                id,
+                dto
+            );
+
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
+    }
+
+    [Authorize(Roles = "Admin,HR")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var result = await _service.DeleteAsync(id);
+        var result =
+            await _service.DeleteAsync(id);
 
         return ServiceResultMapper.ToActionResult(
             this,

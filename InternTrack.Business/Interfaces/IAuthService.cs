@@ -23,4 +23,14 @@ public interface IAuthService
         int userId,
         string? avatar
     );
+
+    Task<ServiceResult> ChangePasswordAsync(
+        int userId,
+        ChangePasswordDto dto
+    );
+
+    Task<ServiceResult> UpdateProfileAsync(
+        int userId,
+        UpdateProfileDto dto
+    );
 }

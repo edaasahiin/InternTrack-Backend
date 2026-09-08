@@ -21,6 +21,11 @@ public interface IInternService
         CreateInternDto dto
     );
 
+    Task<ServiceResult> UpdateAsync(
+        int id,
+        UpdateInternDto dto
+    );
+
     Task<ServiceResult> DeleteAsync(
         int id
     );

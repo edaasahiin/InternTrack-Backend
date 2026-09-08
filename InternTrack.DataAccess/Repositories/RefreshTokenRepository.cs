@@ -17,10 +17,12 @@ public class RefreshTokenRepository : IRefreshTokenRepository
     public async Task AddAsync(RefreshToken refreshToken)
     {
         await _db.RefreshTokens.AddAsync(refreshToken);
+
         await _db.SaveChangesAsync();
     }
 
-    public async Task<RefreshToken?> GetByTokenAsync(string token)
+    public async Task<RefreshToken?> GetByTokenAsync(
+        string token)
     {
         return await _db.RefreshTokens
             .Include(x => x.User)
@@ -29,9 +31,45 @@ public class RefreshTokenRepository : IRefreshTokenRepository
             );
     }
 
-    public async Task UpdateAsync(RefreshToken refreshToken)
+    public async Task UpdateAsync(
+        RefreshToken refreshToken)
     {
-        _db.RefreshTokens.Update(refreshToken);
+        _db.RefreshTokens.Update(
+            refreshToken
+        );
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task RevokeAllByUserIdAsync(
+        int userId)
+    {
+        var activeRefreshTokens =
+            await _db.RefreshTokens
+                .Where(
+                    x =>
+                        x.UserId == userId &&
+                        x.RevokedAt == null
+                )
+                .ToListAsync();
+
+        if (activeRefreshTokens.Count == 0)
+        {
+            return;
+        }
+
+        var revokedAt =
+            DateTime.UtcNow;
+
+        foreach (
+            var refreshToken
+            in activeRefreshTokens
+        )
+        {
+            refreshToken.RevokedAt =
+                revokedAt;
+        }
+
         await _db.SaveChangesAsync();
     }
 }

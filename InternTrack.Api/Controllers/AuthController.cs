@@ -61,7 +61,9 @@ public class AuthController : ControllerBase
             surname = result.Data.Surname,
             avatar = result.Data.Avatar,
             email = result.Data.Email,
-            role = result.Data.Role
+            role = result.Data.Role,
+            mustChangePassword =
+                result.Data.MustChangePassword
         });
     }
 
@@ -101,7 +103,9 @@ public class AuthController : ControllerBase
             surname = user.Surname,
             avatar = user.Avatar,
             email = user.Email,
-            role = user.Role
+            role = user.Role,
+            mustChangePassword =
+                user.MustChangePassword
         });
     }
 
@@ -127,6 +131,66 @@ public class AuthController : ControllerBase
             await _authService.UpdateAvatarAsync(
                 userId,
                 dto.Avatar
+            );
+
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile(
+        UpdateProfileDto dto)
+    {
+        var userIdClaim =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier
+            );
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Kullanıcı bilgisi doğrulanamadı."
+            });
+        }
+
+        var result =
+            await _authService.UpdateProfileAsync(
+                userId,
+                dto
+            );
+
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result
+        );
+    }
+
+    [Authorize]
+    [HttpPut("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        ChangePasswordDto dto)
+    {
+        var userIdClaim =
+            User.FindFirstValue(
+                ClaimTypes.NameIdentifier
+            );
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Kullanıcı bilgisi doğrulanamadı."
+            });
+        }
+
+        var result =
+            await _authService.ChangePasswordAsync(
+                userId,
+                dto
             );
 
         return ServiceResultMapper.ToActionResult(
@@ -170,7 +234,9 @@ public class AuthController : ControllerBase
             surname = result.Data.Surname,
             avatar = result.Data.Avatar,
             email = result.Data.Email,
-            role = result.Data.Role
+            role = result.Data.Role,
+            mustChangePassword =
+                result.Data.MustChangePassword
         });
     }
 

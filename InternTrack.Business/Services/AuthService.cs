@@ -29,7 +29,8 @@ public class AuthService : IAuthService
         _configuration = configuration;
     }
 
-    public async Task<ServiceResult> RegisterAsync(RegisterDto dto)
+    public async Task<ServiceResult> RegisterAsync(
+        RegisterDto dto)
     {
         var department =
             await _departmentRepository.GetByIdAsync(
@@ -62,7 +63,8 @@ public class AuthService : IAuthService
             Email = dto.Email.Trim(),
             PasswordHash =
                 PasswordHasher.Hash(dto.Password),
-            Role = "Intern"
+            Role = "Intern",
+            MustChangePassword = false
         };
 
         var intern = new Intern
@@ -83,8 +85,8 @@ public class AuthService : IAuthService
         );
     }
 
-    public async Task<ServiceResult<LoginResponseDto>> LoginAsync(
-        LoginDto dto)
+    public async Task<ServiceResult<LoginResponseDto>>
+        LoginAsync(LoginDto dto)
     {
         var user =
             await _userRepository.GetByEmailAsync(
@@ -135,9 +137,10 @@ public class AuthService : IAuthService
         {
             Token = refreshTokenValue,
             CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(
-                refreshTokenDays
-            ),
+            ExpiresAt =
+                DateTime.UtcNow.AddDays(
+                    refreshTokenDays
+                ),
             UserId = user.Id
         };
 
@@ -153,20 +156,23 @@ public class AuthService : IAuthService
             Surname = user.Surname,
             Avatar = user.Avatar,
             Email = user.Email,
-            Role = user.Role
+            Role = user.Role,
+            MustChangePassword =
+                user.MustChangePassword
         };
 
         return ServiceResult<LoginResponseDto>
             .Ok(response);
     }
 
-    public async Task<ServiceResult<LoginResponseDto>> RefreshAsync(
-        string refreshToken)
+    public async Task<ServiceResult<LoginResponseDto>>
+        RefreshAsync(string refreshToken)
     {
         var storedRefreshToken =
-            await _refreshTokenRepository.GetByTokenAsync(
-                refreshToken
-            );
+            await _refreshTokenRepository
+                .GetByTokenAsync(
+                    refreshToken
+                );
 
         if (storedRefreshToken == null)
         {
@@ -184,7 +190,10 @@ public class AuthService : IAuthService
                 );
         }
 
-        if (storedRefreshToken.ExpiresAt <= DateTime.UtcNow)
+        if (
+            storedRefreshToken.ExpiresAt
+            <= DateTime.UtcNow
+        )
         {
             return ServiceResult<LoginResponseDto>
                 .ValidationError(
@@ -227,15 +236,18 @@ public class AuthService : IAuthService
             );
         }
 
-        var newRefreshToken = new RefreshToken
-        {
-            Token = newRefreshTokenValue,
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddDays(
-                refreshTokenDays
-            ),
-            UserId = storedRefreshToken.User.Id
-        };
+        var newRefreshToken =
+            new RefreshToken
+            {
+                Token = newRefreshTokenValue,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt =
+                    DateTime.UtcNow.AddDays(
+                        refreshTokenDays
+                    ),
+                UserId =
+                    storedRefreshToken.User.Id
+            };
 
         await _refreshTokenRepository.AddAsync(
             newRefreshToken
@@ -245,11 +257,19 @@ public class AuthService : IAuthService
         {
             AccessToken = newAccessToken,
             RefreshToken = newRefreshTokenValue,
-            Name = storedRefreshToken.User.Name,
-            Surname = storedRefreshToken.User.Surname,
-            Avatar = storedRefreshToken.User.Avatar,
-            Email = storedRefreshToken.User.Email,
-            Role = storedRefreshToken.User.Role
+            Name =
+                storedRefreshToken.User.Name,
+            Surname =
+                storedRefreshToken.User.Surname,
+            Avatar =
+                storedRefreshToken.User.Avatar,
+            Email =
+                storedRefreshToken.User.Email,
+            Role =
+                storedRefreshToken.User.Role,
+            MustChangePassword =
+                storedRefreshToken.User
+                    .MustChangePassword
         };
 
         return ServiceResult<LoginResponseDto>
@@ -260,9 +280,10 @@ public class AuthService : IAuthService
         string refreshToken)
     {
         var storedRefreshToken =
-            await _refreshTokenRepository.GetByTokenAsync(
-                refreshToken
-            );
+            await _refreshTokenRepository
+                .GetByTokenAsync(
+                    refreshToken
+                );
 
         if (storedRefreshToken == null)
         {
@@ -290,9 +311,10 @@ public class AuthService : IAuthService
         );
     }
 
-    public async Task<ServiceResult> UpdateAvatarAsync(
-        int userId,
-        string? avatar)
+    public async Task<ServiceResult>
+        UpdateAvatarAsync(
+            int userId,
+            string? avatar)
     {
         var user =
             await _userRepository.GetByIdAsync(
@@ -311,10 +333,147 @@ public class AuthService : IAuthService
                 ? null
                 : avatar.Trim();
 
-        await _userRepository.UpdateAsync(user);
+        await _userRepository.UpdateAsync(
+            user
+        );
 
         return ServiceResult.Ok(
             "Avatar başarıyla güncellendi."
+        );
+    }
+
+    public async Task<ServiceResult>
+        ChangePasswordAsync(
+            int userId,
+            ChangePasswordDto dto)
+    {
+        var user =
+            await _userRepository.GetByIdAsync(
+                userId
+            );
+
+        if (user == null)
+        {
+            return ServiceResult.ValidationError(
+                "Kullanıcı bulunamadı."
+            );
+        }
+
+        var currentPasswordIsCorrect =
+            PasswordHasher.Verify(
+                dto.CurrentPassword,
+                user.PasswordHash
+            );
+
+        if (!currentPasswordIsCorrect)
+        {
+            return ServiceResult.ValidationError(
+                "Mevcut şifre hatalı."
+            );
+        }
+
+        var newPasswordIsSameAsCurrent =
+            PasswordHasher.Verify(
+                dto.NewPassword,
+                user.PasswordHash
+            );
+
+        if (newPasswordIsSameAsCurrent)
+        {
+            return ServiceResult.ValidationError(
+                "Yeni şifre mevcut şifreden farklı olmalıdır."
+            );
+        }
+
+        user.PasswordHash =
+            PasswordHasher.Hash(
+                dto.NewPassword
+            );
+
+        user.MustChangePassword = false;
+
+        await _userRepository.UpdateAsync(
+            user
+        );
+
+        await _refreshTokenRepository
+            .RevokeAllByUserIdAsync(
+                userId
+            );
+
+        return ServiceResult.Ok(
+            "Şifre başarıyla değiştirildi."
+        );
+    }
+
+    public async Task<ServiceResult>
+        UpdateProfileAsync(
+            int userId,
+            UpdateProfileDto dto)
+    {
+        var user =
+            await _userRepository.GetByIdAsync(
+                userId
+            );
+
+        if (user == null)
+        {
+            return ServiceResult.ValidationError(
+                "Kullanıcı bulunamadı."
+            );
+        }
+
+        var normalizedEmail =
+            dto.Email.Trim();
+
+        var emailChanged =
+            !user.Email.Equals(
+                normalizedEmail,
+                StringComparison.OrdinalIgnoreCase
+            );
+
+        if (emailChanged)
+        {
+            var emailExists =
+                await _userRepository.EmailExistsAsync(
+                    normalizedEmail
+                );
+
+            if (emailExists)
+            {
+                return ServiceResult.Conflict(
+                    "Bu email adresi başka bir kullanıcı tarafından kullanılıyor."
+                );
+            }
+        }
+
+        user.Name =
+            dto.Name.Trim();
+
+        user.Surname =
+            dto.Surname.Trim();
+
+        user.Email =
+            normalizedEmail;
+
+        if (user.Intern != null)
+        {
+            user.Intern.Name =
+                dto.Name.Trim();
+
+            user.Intern.Surname =
+                dto.Surname.Trim();
+
+            user.Intern.Email =
+                normalizedEmail;
+        }
+
+        await _userRepository.UpdateAsync(
+            user
+        );
+
+        return ServiceResult.Ok(
+            "Profil başarıyla güncellendi."
         );
     }
 }

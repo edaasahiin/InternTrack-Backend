@@ -18,6 +18,8 @@ public class User
 
     public string Role { get; set; } = "Intern";
 
+    public bool MustChangePassword { get; set; } = false;
+
     [JsonIgnore]
     public Intern? Intern { get; set; }
 

@@ -145,7 +145,8 @@ public class InternService : IInternService
             Email = dto.Email.Trim(),
             PasswordHash =
                 PasswordHasher.Hash(dto.Password),
-            Role = "Intern"
+            Role = "Intern",
+            MustChangePassword = true
         };
 
         var intern = new Intern
@@ -166,6 +167,116 @@ public class InternService : IInternService
         );
     }
 
+    public async Task<ServiceResult> UpdateAsync(
+        int id,
+        UpdateInternDto dto)
+    {
+        var intern =
+            await _internRepository.GetByIdAsync(
+                id
+            );
+
+        if (intern == null)
+        {
+            return ServiceResult.NotFound(
+                "Stajyer bulunamadı."
+            );
+        }
+
+        var department =
+            await _departmentRepository.GetByIdAsync(
+                dto.DepartmentId
+            );
+
+        if (department == null)
+        {
+            return ServiceResult.ValidationError(
+                "Departman bulunamadı."
+            );
+        }
+
+        var user =
+            await _userRepository.GetByIdAsync(
+                intern.UserId
+            );
+
+        if (user == null)
+        {
+            return ServiceResult.NotFound(
+                "Stajyere bağlı kullanıcı hesabı bulunamadı."
+            );
+        }
+
+        var normalizedNewEmail =
+            dto.Email.Trim();
+
+        var emailChanged =
+            !user.Email.Equals(
+                normalizedNewEmail,
+                StringComparison.OrdinalIgnoreCase
+            );
+
+        if (emailChanged)
+        {
+            var userEmailExists =
+                await _userRepository.EmailExistsAsync(
+                    normalizedNewEmail
+                );
+
+            if (userEmailExists)
+            {
+                return ServiceResult.Conflict(
+                    "Bu email adresi başka bir kullanıcı tarafından kullanılıyor."
+                );
+            }
+
+            var internEmailExists =
+                await _internRepository.EmailExistsAsync(
+                    normalizedNewEmail
+                );
+
+            if (internEmailExists)
+            {
+                return ServiceResult.Conflict(
+                    "Bu email adresi başka bir stajyer tarafından kullanılıyor."
+                );
+            }
+        }
+
+        intern.Name =
+            dto.Name.Trim();
+
+        intern.Surname =
+            dto.Surname.Trim();
+
+        intern.Email =
+            normalizedNewEmail;
+
+        intern.DepartmentId =
+            dto.DepartmentId;
+
+        user.Name =
+            dto.Name.Trim();
+
+        user.Surname =
+            dto.Surname.Trim();
+
+        user.Email =
+            normalizedNewEmail;
+
+        await _internRepository.UpdateAsync(
+            intern
+        );
+
+        await _userRepository.UpdateAsync(
+            user
+        );
+
+        return ServiceResult.Ok(
+            "Stajyer bilgileri başarıyla güncellendi."
+        );
+    }
+
     public async Task<ServiceResult> DeleteAsync(
         int id)
     {
@@ -179,12 +290,24 @@ public class InternService : IInternService
             );
         }
 
-        await _internRepository.DeleteAsync(
-            intern
+        var user =
+            await _userRepository.GetByIdAsync(
+                intern.UserId
+            );
+
+        if (user == null)
+        {
+            return ServiceResult.NotFound(
+                "Stajyere bağlı kullanıcı hesabı bulunamadı."
+            );
+        }
+
+        await _userRepository.DeleteAsync(
+            user
         );
 
         return ServiceResult.Ok(
-            "Stajyer silindi."
+            "Stajyer ve kullanıcı hesabı başarıyla silindi."
         );
     }
 }
