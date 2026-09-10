@@ -152,11 +152,21 @@ public class TaskService : ITaskService
         var task = new TaskItem
         {
             Title = dto.Title.Trim(),
+
             Description =
                 dto.Description?.Trim(),
-            Status = dto.Status.Trim(),
-            InternId = internId,
-            CreatedByUserId = userId,
+
+            Status =
+                dto.Status.Trim(),
+
+            Priority =
+                dto.Priority.Trim(),
+
+            InternId =
+                internId,
+
+            CreatedByUserId =
+                userId,
 
             CanInternDeleteWhenCompleted =
                 role == "Admin" ||
@@ -235,12 +245,21 @@ public class TaskService : ITaskService
             task.Status =
                 newStatus;
 
+            var createdByCurrentIntern =
+                task.CreatedByUserId == userId;
+
+            if (createdByCurrentIntern)
+            {
+                task.Priority =
+                    dto.Priority.Trim();
+            }
+
             await _taskRepository.UpdateAsync(
                 task
             );
 
             return ServiceResult.Ok(
-                "Görev durumu güncellendi."
+                "Görev güncellendi."
             );
         }
 
@@ -292,6 +311,9 @@ public class TaskService : ITaskService
 
         task.Status =
             newAdminStatus;
+
+        task.Priority =
+            dto.Priority.Trim();
 
         task.InternId =
             dto.InternId;

@@ -10,6 +10,8 @@ public class TaskItem
 
     public required string Status { get; set; }
 
+    public string Priority { get; set; } = "Medium";
+
     public int InternId { get; set; }
 
     public Intern? Intern { get; set; }

@@ -21,6 +21,9 @@ public class CreateTaskDto
     [Required(ErrorMessage = "Görev durumu zorunludur.")]
     public required string Status { get; set; }
 
+    [Required(ErrorMessage = "Görev önceliği zorunludur.")]
+    public string Priority { get; set; } = "Medium";
+
     public int InternId { get; set; }
 
     public bool CanInternDeleteWhenCompleted { get; set; } = false;

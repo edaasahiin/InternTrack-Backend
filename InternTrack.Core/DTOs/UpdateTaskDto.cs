@@ -21,6 +21,9 @@ public class UpdateTaskDto
     [Required(ErrorMessage = "Görev durumu zorunludur.")]
     public required string Status { get; set; }
 
+    [Required(ErrorMessage = "Görev önceliği zorunludur.")]
+    public string Priority { get; set; } = "Medium";
+
     [Range(
         1,
         int.MaxValue,
