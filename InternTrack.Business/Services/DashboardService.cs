@@ -16,18 +16,20 @@ public class DashboardService : IDashboardService
         ITaskRepository taskRepository,
         IDepartmentRepository departmentRepository)
     {
-        _internRepository = internRepository;
-        _taskRepository = taskRepository;
-        _departmentRepository = departmentRepository;
+        _internRepository =
+            internRepository;
+
+        _taskRepository =
+            taskRepository;
+
+        _departmentRepository =
+            departmentRepository;
     }
 
     public async Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(
         int userId,
         string role)
     {
-        var departments =
-            await _departmentRepository.GetAllAsync();
-
         if (
             role == "Admin" ||
             role == "HR"
@@ -39,27 +41,67 @@ public class DashboardService : IDashboardService
             var tasks =
                 await _taskRepository.GetAllAsync();
 
+            var departments =
+                await _departmentRepository.GetAllAsync();
+
+            var now =
+                DateTime.UtcNow;
+
+            var toDoTaskCount =
+                tasks.Count(
+                    task =>
+                        task.Status == "ToDo" &&
+                        (
+                            !task.DueDate.HasValue ||
+                            task.DueDate.Value >= now
+                        )
+                );
+
+            var inProgressTaskCount =
+                tasks.Count(
+                    task =>
+                        task.Status == "InProgress" &&
+                        (
+                            !task.DueDate.HasValue ||
+                            task.DueDate.Value >= now
+                        )
+                );
+
             var completedTaskCount =
                 tasks.Count(
                     task =>
                         task.Status == "Done"
                 );
 
-            var pendingTaskCount =
+            var overdueTaskCount =
                 tasks.Count(
                     task =>
-                        task.Status != "Done"
+                        task.Status != "Done" &&
+                        task.DueDate.HasValue &&
+                        task.DueDate.Value < now
                 );
 
             var stats =
                 new DashboardStatsDto
                 {
-                    InternCount = interns.Count,
-                    TaskCount = tasks.Count,
+                    InternCount =
+                        interns.Count,
+
+                    TaskCount =
+                        tasks.Count,
+
+                    ToDoTaskCount =
+                        toDoTaskCount,
+
+                    InProgressTaskCount =
+                        inProgressTaskCount,
+
                     CompletedTaskCount =
                         completedTaskCount,
-                    PendingTaskCount =
-                        pendingTaskCount,
+
+                    OverdueTaskCount =
+                        overdueTaskCount,
+
                     DepartmentCount =
                         departments.Count
                 };
@@ -86,29 +128,66 @@ public class DashboardService : IDashboardService
                 intern.Id
             );
 
+        var currentTime =
+            DateTime.UtcNow;
+
+        var internToDoTaskCount =
+            internTasks.Count(
+                task =>
+                    task.Status == "ToDo" &&
+                    (
+                        !task.DueDate.HasValue ||
+                        task.DueDate.Value >= currentTime
+                    )
+            );
+
+        var internInProgressTaskCount =
+            internTasks.Count(
+                task =>
+                    task.Status == "InProgress" &&
+                    (
+                        !task.DueDate.HasValue ||
+                        task.DueDate.Value >= currentTime
+                    )
+            );
+
         var internCompletedTaskCount =
             internTasks.Count(
                 task =>
                     task.Status == "Done"
             );
 
-        var internPendingTaskCount =
+        var internOverdueTaskCount =
             internTasks.Count(
                 task =>
-                    task.Status != "Done"
+                    task.Status != "Done" &&
+                    task.DueDate.HasValue &&
+                    task.DueDate.Value < currentTime
             );
 
         var internStats =
             new DashboardStatsDto
             {
-                InternCount = 1,
-                TaskCount = internTasks.Count,
+                InternCount =
+                    1,
+
+                TaskCount =
+                    internTasks.Count,
+
+                ToDoTaskCount =
+                    internToDoTaskCount,
+
+                InProgressTaskCount =
+                    internInProgressTaskCount,
+
                 CompletedTaskCount =
                     internCompletedTaskCount,
-                PendingTaskCount =
-                    internPendingTaskCount,
+
+                OverdueTaskCount =
+                    internOverdueTaskCount,
+
                 DepartmentCount =
-                    departments.Count
+                    0
             };
 
         return ServiceResult<DashboardStatsDto>
