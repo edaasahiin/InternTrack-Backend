@@ -24,6 +24,8 @@ public class CreateTaskDto
     [Required(ErrorMessage = "Görev önceliği zorunludur.")]
     public string Priority { get; set; } = "Medium";
 
+    public DateTime? DueDate { get; set; }
+
     public int InternId { get; set; }
 
     public bool CanInternDeleteWhenCompleted { get; set; } = false;

@@ -24,6 +24,8 @@ public class UpdateTaskDto
     [Required(ErrorMessage = "Görev önceliği zorunludur.")]
     public string Priority { get; set; } = "Medium";
 
+    public DateTime? DueDate { get; set; }
+
     [Range(
         1,
         int.MaxValue,

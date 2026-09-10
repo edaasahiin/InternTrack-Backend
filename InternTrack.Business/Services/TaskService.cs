@@ -105,6 +105,19 @@ public class TaskService : ITaskService
     {
         int internId;
 
+        var dueDateUtc =
+            dto.DueDate?.ToUniversalTime();
+
+        if (
+            dueDateUtc.HasValue &&
+            dueDateUtc.Value < DateTime.UtcNow
+        )
+        {
+            return ServiceResult.ValidationError(
+                "Son teslim tarihi geçmiş bir tarih ve saat olamaz."
+            );
+        }
+
         if (role == "Intern")
         {
             var currentIntern =
@@ -151,7 +164,8 @@ public class TaskService : ITaskService
 
         var task = new TaskItem
         {
-            Title = dto.Title.Trim(),
+            Title =
+                dto.Title.Trim(),
 
             Description =
                 dto.Description?.Trim(),
@@ -161,6 +175,9 @@ public class TaskService : ITaskService
 
             Priority =
                 dto.Priority.Trim(),
+
+            DueDate =
+                dueDateUtc,
 
             InternId =
                 internId,
@@ -180,7 +197,9 @@ public class TaskService : ITaskService
                     : null
         };
 
-        await _taskRepository.AddAsync(task);
+        await _taskRepository.AddAsync(
+            task
+        );
 
         return ServiceResult.Ok(
             "Görev oluşturuldu."
@@ -194,7 +213,9 @@ public class TaskService : ITaskService
         string role)
     {
         var task =
-            await _taskRepository.GetByIdAsync(id);
+            await _taskRepository.GetByIdAsync(
+                id
+            );
 
         if (task == null)
         {
@@ -246,12 +267,38 @@ public class TaskService : ITaskService
                 newStatus;
 
             var createdByCurrentIntern =
-                task.CreatedByUserId == userId;
+                task.CreatedByUserId ==
+                userId;
 
             if (createdByCurrentIntern)
             {
+                var newDueDateUtc =
+                    dto.DueDate?.ToUniversalTime();
+
+                var currentDueDateUtc =
+                    task.DueDate?.ToUniversalTime();
+
+                var dueDateChanged =
+                    currentDueDateUtc !=
+                    newDueDateUtc;
+
+                if (
+                    dueDateChanged &&
+                    newDueDateUtc.HasValue &&
+                    newDueDateUtc.Value <
+                    DateTime.UtcNow
+                )
+                {
+                    return ServiceResult.ValidationError(
+                        "Son teslim tarihi geçmiş bir tarih ve saat olamaz."
+                    );
+                }
+
                 task.Priority =
                     dto.Priority.Trim();
+
+                task.DueDate =
+                    newDueDateUtc;
             }
 
             await _taskRepository.UpdateAsync(
@@ -285,6 +332,28 @@ public class TaskService : ITaskService
             );
         }
 
+        var newAdminDueDateUtc =
+            dto.DueDate?.ToUniversalTime();
+
+        var currentAdminDueDateUtc =
+            task.DueDate?.ToUniversalTime();
+
+        var adminDueDateChanged =
+            currentAdminDueDateUtc !=
+            newAdminDueDateUtc;
+
+        if (
+            adminDueDateChanged &&
+            newAdminDueDateUtc.HasValue &&
+            newAdminDueDateUtc.Value <
+            DateTime.UtcNow
+        )
+        {
+            return ServiceResult.ValidationError(
+                "Son teslim tarihi geçmiş bir tarih ve saat olamaz."
+            );
+        }
+
         var newAdminStatus =
             dto.Status.Trim();
 
@@ -315,6 +384,9 @@ public class TaskService : ITaskService
         task.Priority =
             dto.Priority.Trim();
 
+        task.DueDate =
+            newAdminDueDateUtc;
+
         task.InternId =
             dto.InternId;
 
@@ -336,7 +408,9 @@ public class TaskService : ITaskService
         string role)
     {
         var task =
-            await _taskRepository.GetByIdAsync(id);
+            await _taskRepository.GetByIdAsync(
+                id
+            );
 
         if (task == null)
         {
@@ -367,7 +441,8 @@ public class TaskService : ITaskService
             }
 
             var createdByCurrentIntern =
-                task.CreatedByUserId == userId;
+                task.CreatedByUserId ==
+                userId;
 
             if (createdByCurrentIntern)
             {

@@ -12,6 +12,8 @@ public class TaskItem
 
     public string Priority { get; set; } = "Medium";
 
+    public DateTime? DueDate { get; set; }
+
     public int InternId { get; set; }
 
     public Intern? Intern { get; set; }
