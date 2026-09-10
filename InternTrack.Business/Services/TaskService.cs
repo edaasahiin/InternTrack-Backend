@@ -249,18 +249,44 @@ public class TaskService : ITaskService
                 dto.Status.Trim();
 
             if (
-                task.Status != "Done" &&
+                task.Status == "ToDo" &&
+                newStatus != "ToDo" &&
+                newStatus != "InProgress"
+            )
+            {
+                return ServiceResult.ValidationError(
+                    "Görev tamamlanmadan önce başlatılmalıdır."
+                );
+            }
+
+            if (
+                task.Status == "InProgress" &&
+                newStatus != "InProgress" &&
+                newStatus != "Done"
+            )
+            {
+                return ServiceResult.ValidationError(
+                    "Geçersiz görev durumu."
+                );
+            }
+
+            if (
+                task.Status == "Done" &&
+                newStatus != "Done"
+            )
+            {
+                return ServiceResult.ValidationError(
+                    "Tamamlanan görev tekrar açılamaz."
+                );
+            }
+
+            if (
+                task.Status == "InProgress" &&
                 newStatus == "Done"
             )
             {
                 task.CompletedAt =
                     DateTime.UtcNow;
-            }
-
-            if (newStatus != "Done")
-            {
-                task.CompletedAt =
-                    null;
             }
 
             task.Status =
