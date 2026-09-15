@@ -8,9 +8,20 @@ public interface IDepartmentRepository
 
     Task<Department?> GetByIdAsync(int id);
 
-    Task<bool> NameExistsAsync(string name);
+    Task<bool> NameExistsAsync(
+        string name,
+        int? excludeId = null
+    );
 
-    Task AddAsync(Department department);
+    Task AddAsync(
+        Department department
+    );
 
-    Task DeleteAsync(Department department);
+    Task UpdateAsync(
+        Department department
+    );
+
+    Task DeleteAsync(
+        Department department
+    );
 }

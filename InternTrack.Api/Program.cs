@@ -14,14 +14,20 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173" ,  "http://localhost:5174")
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:5174"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -30,7 +36,9 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlite("Data Source=interntrack.db");
+    options.UseSqlite(
+        "Data Source=interntrack.db"
+    );
 });
 
 // Repository Dependency Injection
@@ -38,26 +46,25 @@ builder.Services.AddScoped<IInternRepository, InternRepository>();
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<
-    IRefreshTokenRepository,
-    RefreshTokenRepository
->();
-builder.Services.AddScoped<
-    IDashboardService,
-    DashboardService
->();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 // Service Dependency Injection
 builder.Services.AddScoped<IInternService, InternService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 // JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"];
-var jwtIssuer = builder.Configuration["Jwt:Issuer"];
-var jwtAudience = builder.Configuration["Jwt:Audience"];
+var jwtKey =
+    builder.Configuration["Jwt:Key"];
+
+var jwtIssuer =
+    builder.Configuration["Jwt:Issuer"];
+
+var jwtAudience =
+    builder.Configuration["Jwt:Audience"];
 
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
@@ -67,7 +74,9 @@ if (string.IsNullOrWhiteSpace(jwtKey))
 }
 
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(
+        JwtBearerDefaults.AuthenticationScheme
+    )
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters =
@@ -83,7 +92,9 @@ builder.Services
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)
+                        Encoding.UTF8.GetBytes(
+                            jwtKey
+                        )
                     ),
 
                 ClockSkew = TimeSpan.Zero
@@ -96,7 +107,18 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "InternTrack API v1"
+        );
+
+        options.DocumentTitle =
+            "InternTrack API Documentation";
+    });
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -111,9 +133,12 @@ app.UseAuthorization();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext =
-        scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        scope.ServiceProvider
+            .GetRequiredService<AppDbContext>();
 
-    await DbSeeder.SeedAsync(dbContext);
+    await DbSeeder.SeedAsync(
+        dbContext
+    );
 }
 
 app.MapControllers();

@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
@@ -10,6 +9,7 @@ namespace InternTrack.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[Produces("application/json")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -26,34 +26,67 @@ public class AuthController : ControllerBase
         _configuration = configuration;
     }
 
+    [AllowAnonymous]
     [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterDto dto)
+    [ProducesResponseType(
+        StatusCodes.Status201Created
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status409Conflict
+    )]
+    public async Task<IActionResult> Register(
+        [FromBody] RegisterDto dto)
     {
         var result =
-            await _authService.RegisterAsync(dto);
+            await _authService.RegisterAsync(
+                dto
+            );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result,
-            StatusCodes.Status201Created
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result,
+                StatusCodes.Status201Created
+            );
     }
 
+    [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginDto dto)
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    public async Task<IActionResult> Login(
+        [FromBody] LoginDto dto)
     {
         var result =
-            await _authService.LoginAsync(dto);
-
-        if (!result.Success || result.Data == null)
-        {
-            return ServiceResultMapper.ToActionResult(
-                this,
-                result
+            await _authService.LoginAsync(
+                dto
             );
+
+        if (
+            !result.Success ||
+            result.Data == null
+        )
+        {
+            return ServiceResultMapper
+                .ToActionResult(
+                    this,
+                    result
+                );
         }
 
-        WriteTokenCookies(result.Data);
+        WriteTokenCookies(
+            result.Data
+        );
 
         return Ok(new
         {
@@ -69,31 +102,37 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
     public async Task<IActionResult> Me()
     {
-        var userIdClaim =
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier
-            );
-
-        if (!int.TryParse(userIdClaim, out var userId))
+        if (!CurrentUserHelper.TryGetUserId(
+            User,
+            out var userId))
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgisi doğrulanamadı."
+                message =
+                    "Kullanıcı bilgisi doğrulanamadı."
             });
         }
 
         var user =
-            await _userRepository.GetByIdAsync(
-                userId
-            );
+            await _userRepository
+                .GetByIdAsync(
+                    userId
+                );
 
         if (user == null)
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bulunamadı."
+                message =
+                    "Kullanıcı bulunamadı."
             });
         }
 
@@ -111,122 +150,179 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPut("avatar")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
     public async Task<IActionResult> UpdateAvatar(
-        UpdateAvatarDto dto)
+        [FromBody] UpdateAvatarDto dto)
     {
-        var userIdClaim =
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier
-            );
-
-        if (!int.TryParse(userIdClaim, out var userId))
+        if (!CurrentUserHelper.TryGetUserId(
+            User,
+            out var userId))
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgisi doğrulanamadı."
+                message =
+                    "Kullanıcı bilgisi doğrulanamadı."
             });
         }
 
         var result =
-            await _authService.UpdateAvatarAsync(
-                userId,
-                dto.Avatar
-            );
+            await _authService
+                .UpdateAvatarAsync(
+                    userId,
+                    dto.Avatar
+                );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result
+            );
     }
 
     [Authorize]
     [HttpPut("profile")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status409Conflict
+    )]
     public async Task<IActionResult> UpdateProfile(
-        UpdateProfileDto dto)
+        [FromBody] UpdateProfileDto dto)
     {
-        var userIdClaim =
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier
-            );
-
-        if (!int.TryParse(userIdClaim, out var userId))
+        if (!CurrentUserHelper.TryGetUserId(
+            User,
+            out var userId))
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgisi doğrulanamadı."
+                message =
+                    "Kullanıcı bilgisi doğrulanamadı."
             });
         }
 
         var result =
-            await _authService.UpdateProfileAsync(
-                userId,
-                dto
-            );
+            await _authService
+                .UpdateProfileAsync(
+                    userId,
+                    dto
+                );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result
+            );
     }
 
     [Authorize]
     [HttpPut("change-password")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
     public async Task<IActionResult> ChangePassword(
-        ChangePasswordDto dto)
+        [FromBody] ChangePasswordDto dto)
     {
-        var userIdClaim =
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier
-            );
-
-        if (!int.TryParse(userIdClaim, out var userId))
+        if (!CurrentUserHelper.TryGetUserId(
+            User,
+            out var userId))
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgisi doğrulanamadı."
+                message =
+                    "Kullanıcı bilgisi doğrulanamadı."
             });
         }
 
         var result =
-            await _authService.ChangePasswordAsync(
-                userId,
-                dto
-            );
+            await _authService
+                .ChangePasswordAsync(
+                    userId,
+                    dto
+                );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result
-        );
-    }
-
-    [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh()
-    {
-        var refreshToken =
-            Request.Cookies["refreshToken"];
-
-        if (string.IsNullOrWhiteSpace(refreshToken))
-        {
-            return Unauthorized(new
-            {
-                message = "Refresh token bulunamadı."
-            });
-        }
-
-        var result =
-            await _authService.RefreshAsync(
-                refreshToken
-            );
-
-        if (!result.Success || result.Data == null)
-        {
-            return ServiceResultMapper.ToActionResult(
+        return ServiceResultMapper
+            .ToActionResult(
                 this,
                 result
             );
+    }
+
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    public async Task<IActionResult> Refresh()
+    {
+        var refreshToken =
+            Request.Cookies[
+                "refreshToken"
+            ];
+
+        if (string.IsNullOrWhiteSpace(
+            refreshToken))
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "Refresh token bulunamadı."
+            });
         }
 
-        WriteTokenCookies(result.Data);
+        var result =
+            await _authService
+                .RefreshAsync(
+                    refreshToken
+                );
+
+        if (
+            !result.Success ||
+            result.Data == null
+        )
+        {
+            return ServiceResultMapper
+                .ToActionResult(
+                    this,
+                    result
+                );
+        }
+
+        WriteTokenCookies(
+            result.Data
+        );
 
         return Ok(new
         {
@@ -240,24 +336,33 @@ public class AuthController : ControllerBase
         });
     }
 
+    [AllowAnonymous]
     [HttpPost("logout")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
     public async Task<IActionResult> Logout()
     {
         var refreshToken =
-            Request.Cookies["refreshToken"];
+            Request.Cookies[
+                "refreshToken"
+            ];
 
-        if (!string.IsNullOrWhiteSpace(refreshToken))
+        if (!string.IsNullOrWhiteSpace(
+            refreshToken))
         {
-            await _authService.LogoutAsync(
-                refreshToken
-            );
+            await _authService
+                .LogoutAsync(
+                    refreshToken
+                );
         }
 
         DeleteTokenCookies();
 
         return Ok(new
         {
-            message = "Çıkış başarılı."
+            message =
+                "Çıkış başarılı."
         });
     }
 
@@ -281,11 +386,13 @@ public class AuthController : ControllerBase
             {
                 HttpOnly = true,
                 Secure = false,
-                SameSite = SameSiteMode.Lax,
+                SameSite =
+                    SameSiteMode.Lax,
                 Expires =
-                    DateTimeOffset.UtcNow.AddMinutes(
-                        accessTokenMinutes
-                    )
+                    DateTimeOffset.UtcNow
+                        .AddMinutes(
+                            accessTokenMinutes
+                        )
             }
         );
 
@@ -296,11 +403,13 @@ public class AuthController : ControllerBase
             {
                 HttpOnly = true,
                 Secure = false,
-                SameSite = SameSiteMode.Lax,
+                SameSite =
+                    SameSiteMode.Lax,
                 Expires =
-                    DateTimeOffset.UtcNow.AddDays(
-                        refreshTokenDays
-                    )
+                    DateTimeOffset.UtcNow
+                        .AddDays(
+                            refreshTokenDays
+                        )
             }
         );
     }
@@ -312,7 +421,8 @@ public class AuthController : ControllerBase
             {
                 HttpOnly = true,
                 Secure = false,
-                SameSite = SameSiteMode.Lax
+                SameSite =
+                    SameSiteMode.Lax
             };
 
         Response.Cookies.Delete(

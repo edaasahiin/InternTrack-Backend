@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
+using InternTrack.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,70 +10,154 @@ namespace InternTrack.Api.Controllers;
 [ApiController]
 [Route("api/interns")]
 [Authorize]
+[Produces("application/json")]
 public class InternController : ControllerBase
 {
     private readonly IInternService _service;
 
-    public InternController(IInternService service)
+    public InternController(
+        IInternService service)
     {
         _service = service;
     }
 
     [HttpGet]
+    [ProducesResponseType(
+        typeof(List<Intern>),
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
     public async Task<IActionResult> GetAll()
     {
-        var userId = GetCurrentUserId();
-        var role = GetCurrentUserRole();
+        if (!CurrentUserHelper.TryGetUserInfo(
+            User,
+            out var userId,
+            out var role))
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
+            });
+        }
 
-        var result = await _service.GetAllAsync(
-            userId,
-            role
-        );
+        var result =
+            await _service.GetAllAsync(
+                userId,
+                role
+            );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result
+            );
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(int id)
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(
+        typeof(Intern),
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
+    public async Task<IActionResult> GetById(
+        [FromRoute] int id)
     {
-        var userId = GetCurrentUserId();
-        var role = GetCurrentUserRole();
+        if (!CurrentUserHelper.TryGetUserInfo(
+            User,
+            out var userId,
+            out var role))
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
+            });
+        }
 
-        var result = await _service.GetByIdAsync(
-            id,
-            userId,
-            role
-        );
+        var result =
+            await _service.GetByIdAsync(
+                id,
+                userId,
+                role
+            );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result
+            );
     }
 
     [Authorize(Roles = "Admin,HR")]
     [HttpPost]
+    [ProducesResponseType(
+        StatusCodes.Status201Created
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status409Conflict
+    )]
     public async Task<IActionResult> Add(
-        CreateInternDto dto)
+        [FromBody] CreateInternDto dto)
     {
         var result =
-            await _service.AddAsync(dto);
+            await _service.AddAsync(
+                dto
+            );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result,
-            StatusCodes.Status201Created
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result,
+                StatusCodes.Status201Created
+            );
     }
 
     [Authorize(Roles = "Admin,HR")]
-    [HttpPut("{id}")]
+    [HttpPut("{id:int}")]
+    [ProducesResponseType(
+        StatusCodes.Status200OK
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status400BadRequest
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status409Conflict
+    )]
     public async Task<IActionResult> Update(
-        int id,
-        UpdateInternDto dto)
+        [FromRoute] int id,
+        [FromBody] UpdateInternDto dto)
     {
         var result =
             await _service.UpdateAsync(
@@ -81,49 +165,41 @@ public class InternController : ControllerBase
                 dto
             );
 
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result
-        );
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result
+            );
     }
 
     [Authorize(Roles = "Admin,HR")]
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Delete(int id)
+    [HttpDelete("{id:int}")]
+    [ProducesResponseType(
+        typeof(void),
+        StatusCodes.Status204NoContent
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status403Forbidden
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status404NotFound
+    )]
+    public async Task<IActionResult> Delete(
+        [FromRoute] int id)
     {
         var result =
-            await _service.DeleteAsync(id);
-
-        return ServiceResultMapper.ToActionResult(
-            this,
-            result,
-            noContentOnSuccess: true
-        );
-    }
-
-    private int GetCurrentUserId()
-    {
-        var userIdValue =
-            User.FindFirstValue(
-                ClaimTypes.NameIdentifier
+            await _service.DeleteAsync(
+                id
             );
 
-        if (!int.TryParse(
-            userIdValue,
-            out var userId))
-        {
-            throw new InvalidOperationException(
-                "Kullanıcı kimliği token içinde bulunamadı."
+        return ServiceResultMapper
+            .ToActionResult(
+                this,
+                result,
+                noContentOnSuccess: true
             );
-        }
-
-        return userId;
-    }
-
-    private string GetCurrentUserRole()
-    {
-        return User.FindFirstValue(
-            ClaimTypes.Role
-        ) ?? string.Empty;
     }
 }

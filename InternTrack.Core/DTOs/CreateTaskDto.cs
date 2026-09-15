@@ -4,29 +4,52 @@ namespace InternTrack.Core.DTOs;
 
 public class CreateTaskDto
 {
-    [Required(ErrorMessage = "Görev başlığı zorunludur.")]
+    [Required(
+        ErrorMessage = "Görev başlığı zorunludur."
+    )]
     [StringLength(
         150,
         MinimumLength = 2,
-        ErrorMessage = "Görev başlığı 2 ile 150 karakter arasında olmalıdır."
+        ErrorMessage =
+            "Görev başlığı 2 ile 150 karakter arasında olmalıdır."
     )]
     public required string Title { get; set; }
 
     [StringLength(
         500,
-        ErrorMessage = "Açıklama en fazla 500 karakter olabilir."
+        ErrorMessage =
+            "Açıklama en fazla 500 karakter olabilir."
     )]
     public string? Description { get; set; }
 
-    [Required(ErrorMessage = "Görev durumu zorunludur.")]
+    [Required(
+        ErrorMessage = "Görev durumu zorunludur."
+    )]
+    [RegularExpression(
+        "^(ToDo|InProgress|Done)$",
+        ErrorMessage =
+            "Görev durumu ToDo, InProgress veya Done olmalıdır."
+    )]
     public required string Status { get; set; }
 
-    [Required(ErrorMessage = "Görev önceliği zorunludur.")]
-    public string Priority { get; set; } = "Medium";
+    [Required(
+        ErrorMessage = "Görev önceliği zorunludur."
+    )]
+    [RegularExpression(
+        "^(Low|Medium|High)$",
+        ErrorMessage =
+            "Görev önceliği Low, Medium veya High olmalıdır."
+    )]
+    public string Priority { get; set; } =
+        "Medium";
 
     public DateTime? DueDate { get; set; }
 
     public int InternId { get; set; }
 
-    public bool CanInternDeleteWhenCompleted { get; set; } = false;
+    public bool CanInternDeleteWhenCompleted
+    {
+        get;
+        set;
+    } = false;
 }

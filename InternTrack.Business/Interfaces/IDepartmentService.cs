@@ -8,9 +8,20 @@ public interface IDepartmentService
 {
     Task<List<Department>> GetAllAsync();
 
-    Task<ServiceResult<Department>> GetByIdAsync(int id);
+    Task<ServiceResult<Department>> GetByIdAsync(
+        int id
+    );
 
-    Task<ServiceResult> AddAsync(CreateDepartmentDto dto);
+    Task<ServiceResult> AddAsync(
+        CreateDepartmentDto dto
+    );
 
-    Task<ServiceResult> DeleteAsync(int id);
+    Task<ServiceResult> UpdateAsync(
+        int id,
+        CreateDepartmentDto dto
+    );
+
+    Task<ServiceResult> DeleteAsync(
+        int id
+    );
 }

@@ -3,6 +3,7 @@ using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -10,13 +11,16 @@ public class TaskService : ITaskService
 {
     private readonly ITaskRepository _taskRepository;
     private readonly IInternRepository _internRepository;
+    private readonly ILogger<TaskService>? _logger;
 
     public TaskService(
         ITaskRepository taskRepository,
-        IInternRepository internRepository)
+        IInternRepository internRepository,
+        ILogger<TaskService>? logger = null)
     {
         _taskRepository = taskRepository;
         _internRepository = internRepository;
+        _logger = logger;
     }
 
     public async Task<ServiceResult<List<TaskItem>>> GetAllAsync(
@@ -39,6 +43,11 @@ public class TaskService : ITaskService
 
         if (intern == null)
         {
+            _logger?.LogWarning(
+                "Task list could not be retrieved because intern profile was not found. UserId: {UserId}",
+                userId
+            );
+
             return ServiceResult<List<TaskItem>>
                 .NotFound(
                     "Stajyer profili bulunamadı."
@@ -64,6 +73,12 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
+            _logger?.LogWarning(
+                "Task was not found. TaskId: {TaskId}, UserId: {UserId}",
+                id,
+                userId
+            );
+
             return ServiceResult<TaskItem>
                 .NotFound(
                     "Görev bulunamadı."
@@ -79,6 +94,12 @@ public class TaskService : ITaskService
 
             if (intern == null)
             {
+                _logger?.LogWarning(
+                    "Task access failed because intern profile was not found. TaskId: {TaskId}, UserId: {UserId}",
+                    id,
+                    userId
+                );
+
                 return ServiceResult<TaskItem>
                     .NotFound(
                         "Stajyer profili bulunamadı."
@@ -87,6 +108,13 @@ public class TaskService : ITaskService
 
             if (task.InternId != intern.Id)
             {
+                _logger?.LogWarning(
+                    "Unauthorized task access attempt. TaskId: {TaskId}, UserId: {UserId}, InternId: {InternId}",
+                    id,
+                    userId,
+                    intern.Id
+                );
+
                 return ServiceResult<TaskItem>
                     .Forbidden(
                         "Bu göreve erişim yetkiniz yok."
@@ -113,6 +141,12 @@ public class TaskService : ITaskService
             dueDateUtc.Value < DateTime.UtcNow
         )
         {
+            _logger?.LogWarning(
+                "Task creation rejected because due date is in the past. UserId: {UserId}, Role: {Role}",
+                userId,
+                role
+            );
+
             return ServiceResult.ValidationError(
                 "Son teslim tarihi geçmiş bir tarih ve saat olamaz."
             );
@@ -127,6 +161,11 @@ public class TaskService : ITaskService
 
             if (currentIntern == null)
             {
+                _logger?.LogWarning(
+                    "Task creation failed because intern profile was not found. UserId: {UserId}",
+                    userId
+                );
+
                 return ServiceResult.NotFound(
                     "Stajyer profili bulunamadı."
                 );
@@ -147,6 +186,12 @@ public class TaskService : ITaskService
 
             if (selectedIntern == null)
             {
+                _logger?.LogWarning(
+                    "Task creation rejected because selected intern was not found. InternId: {InternId}, UserId: {UserId}",
+                    dto.InternId,
+                    userId
+                );
+
                 return ServiceResult.ValidationError(
                     "Stajyer bulunamadı."
                 );
@@ -157,6 +202,12 @@ public class TaskService : ITaskService
         }
         else
         {
+            _logger?.LogWarning(
+                "Unauthorized task creation attempt. UserId: {UserId}, Role: {Role}",
+                userId,
+                role
+            );
+
             return ServiceResult.Forbidden(
                 "Bu işlem için yetkiniz yok."
             );
@@ -201,6 +252,14 @@ public class TaskService : ITaskService
             task
         );
 
+        _logger?.LogInformation(
+            "Task created successfully. TaskId: {TaskId}, InternId: {InternId}, CreatedByUserId: {UserId}, Role: {Role}",
+            task.Id,
+            internId,
+            userId,
+            role
+        );
+
         return ServiceResult.Ok(
             "Görev oluşturuldu."
         );
@@ -219,6 +278,12 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
+            _logger?.LogWarning(
+                "Task update failed because task was not found. TaskId: {TaskId}, UserId: {UserId}",
+                id,
+                userId
+            );
+
             return ServiceResult.NotFound(
                 "Görev bulunamadı."
             );
@@ -233,6 +298,12 @@ public class TaskService : ITaskService
 
             if (intern == null)
             {
+                _logger?.LogWarning(
+                    "Task update failed because intern profile was not found. TaskId: {TaskId}, UserId: {UserId}",
+                    id,
+                    userId
+                );
+
                 return ServiceResult.NotFound(
                     "Stajyer profili bulunamadı."
                 );
@@ -240,6 +311,13 @@ public class TaskService : ITaskService
 
             if (task.InternId != intern.Id)
             {
+                _logger?.LogWarning(
+                    "Unauthorized task update attempt. TaskId: {TaskId}, UserId: {UserId}, InternId: {InternId}",
+                    id,
+                    userId,
+                    intern.Id
+                );
+
                 return ServiceResult.Forbidden(
                     "Bu görevi güncelleme yetkiniz yok."
                 );
@@ -254,6 +332,14 @@ public class TaskService : ITaskService
                 newStatus != "InProgress"
             )
             {
+                _logger?.LogWarning(
+                    "Invalid task status transition. TaskId: {TaskId}, UserId: {UserId}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
+                    id,
+                    userId,
+                    task.Status,
+                    newStatus
+                );
+
                 return ServiceResult.ValidationError(
                     "Görev tamamlanmadan önce başlatılmalıdır."
                 );
@@ -265,6 +351,14 @@ public class TaskService : ITaskService
                 newStatus != "Done"
             )
             {
+                _logger?.LogWarning(
+                    "Invalid task status transition. TaskId: {TaskId}, UserId: {UserId}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
+                    id,
+                    userId,
+                    task.Status,
+                    newStatus
+                );
+
                 return ServiceResult.ValidationError(
                     "Geçersiz görev durumu."
                 );
@@ -275,6 +369,13 @@ public class TaskService : ITaskService
                 newStatus != "Done"
             )
             {
+                _logger?.LogWarning(
+                    "Completed task reopen attempt rejected. TaskId: {TaskId}, UserId: {UserId}, NewStatus: {NewStatus}",
+                    id,
+                    userId,
+                    newStatus
+                );
+
                 return ServiceResult.ValidationError(
                     "Tamamlanan görev tekrar açılamaz."
                 );
@@ -315,6 +416,12 @@ public class TaskService : ITaskService
                     DateTime.UtcNow
                 )
                 {
+                    _logger?.LogWarning(
+                        "Task update rejected because due date is in the past. TaskId: {TaskId}, UserId: {UserId}",
+                        id,
+                        userId
+                    );
+
                     return ServiceResult.ValidationError(
                         "Son teslim tarihi geçmiş bir tarih ve saat olamaz."
                     );
@@ -331,6 +438,13 @@ public class TaskService : ITaskService
                 task
             );
 
+            _logger?.LogInformation(
+                "Task updated successfully by intern. TaskId: {TaskId}, UserId: {UserId}, Status: {Status}",
+                id,
+                userId,
+                task.Status
+            );
+
             return ServiceResult.Ok(
                 "Görev güncellendi."
             );
@@ -341,6 +455,13 @@ public class TaskService : ITaskService
             role != "HR"
         )
         {
+            _logger?.LogWarning(
+                "Unauthorized task update attempt. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
+                id,
+                userId,
+                role
+            );
+
             return ServiceResult.Forbidden(
                 "Bu işlem için yetkiniz yok."
             );
@@ -353,6 +474,13 @@ public class TaskService : ITaskService
 
         if (selectedIntern == null)
         {
+            _logger?.LogWarning(
+                "Task update rejected because selected intern was not found. TaskId: {TaskId}, InternId: {InternId}, UserId: {UserId}",
+                id,
+                dto.InternId,
+                userId
+            );
+
             return ServiceResult.ValidationError(
                 "Stajyer bulunamadı."
             );
@@ -375,6 +503,13 @@ public class TaskService : ITaskService
             DateTime.UtcNow
         )
         {
+            _logger?.LogWarning(
+                "Task update rejected because due date is in the past. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
+                id,
+                userId,
+                role
+            );
+
             return ServiceResult.ValidationError(
                 "Son teslim tarihi geçmiş bir tarih ve saat olamaz."
             );
@@ -423,6 +558,15 @@ public class TaskService : ITaskService
             task
         );
 
+        _logger?.LogInformation(
+            "Task updated successfully. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}, InternId: {InternId}, Status: {Status}",
+            id,
+            userId,
+            role,
+            task.InternId,
+            task.Status
+        );
+
         return ServiceResult.Ok(
             "Görev güncellendi."
         );
@@ -440,6 +584,12 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
+            _logger?.LogWarning(
+                "Task deletion failed because task was not found. TaskId: {TaskId}, UserId: {UserId}",
+                id,
+                userId
+            );
+
             return ServiceResult.NotFound(
                 "Görev bulunamadı."
             );
@@ -454,6 +604,12 @@ public class TaskService : ITaskService
 
             if (intern == null)
             {
+                _logger?.LogWarning(
+                    "Task deletion failed because intern profile was not found. TaskId: {TaskId}, UserId: {UserId}",
+                    id,
+                    userId
+                );
+
                 return ServiceResult.NotFound(
                     "Stajyer profili bulunamadı."
                 );
@@ -461,6 +617,13 @@ public class TaskService : ITaskService
 
             if (task.InternId != intern.Id)
             {
+                _logger?.LogWarning(
+                    "Unauthorized task deletion attempt. TaskId: {TaskId}, UserId: {UserId}, InternId: {InternId}",
+                    id,
+                    userId,
+                    intern.Id
+                );
+
                 return ServiceResult.Forbidden(
                     "Bu görevi silme yetkiniz yok."
                 );
@@ -476,6 +639,12 @@ public class TaskService : ITaskService
                     task
                 );
 
+                _logger?.LogInformation(
+                    "Task deleted by its creator intern. TaskId: {TaskId}, UserId: {UserId}",
+                    id,
+                    userId
+                );
+
                 return ServiceResult.Ok(
                     "Görev silindi."
                 );
@@ -489,6 +658,14 @@ public class TaskService : ITaskService
                 !task.CanInternDeleteWhenCompleted
             )
             {
+                _logger?.LogWarning(
+                    "Intern task deletion rejected by business rule. TaskId: {TaskId}, UserId: {UserId}, Status: {Status}, CanInternDeleteWhenCompleted: {CanDelete}",
+                    id,
+                    userId,
+                    task.Status,
+                    task.CanInternDeleteWhenCompleted
+                );
+
                 return ServiceResult.Forbidden(
                     "Bu görevi silme yetkiniz yok."
                 );
@@ -499,6 +676,13 @@ public class TaskService : ITaskService
             role != "HR"
         )
         {
+            _logger?.LogWarning(
+                "Unauthorized task deletion attempt. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
+                id,
+                userId,
+                role
+            );
+
             return ServiceResult.Forbidden(
                 "Bu işlem için yetkiniz yok."
             );
@@ -506,6 +690,13 @@ public class TaskService : ITaskService
 
         await _taskRepository.DeleteAsync(
             task
+        );
+
+        _logger?.LogInformation(
+            "Task deleted successfully. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
+            id,
+            userId,
+            role
         );
 
         return ServiceResult.Ok(

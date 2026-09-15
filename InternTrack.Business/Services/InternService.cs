@@ -3,6 +3,7 @@ using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
+using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -11,15 +12,18 @@ public class InternService : IInternService
     private readonly IInternRepository _internRepository;
     private readonly IDepartmentRepository _departmentRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ILogger<InternService>? _logger;
 
     public InternService(
         IInternRepository internRepository,
         IDepartmentRepository departmentRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ILogger<InternService>? logger = null)
     {
         _internRepository = internRepository;
         _departmentRepository = departmentRepository;
         _userRepository = userRepository;
+        _logger = logger;
     }
 
     public async Task<ServiceResult<List<Intern>>> GetAllAsync(
@@ -42,6 +46,11 @@ public class InternService : IInternService
 
         if (intern == null)
         {
+            _logger?.LogWarning(
+                "Intern list could not be retrieved because intern profile was not found. UserId: {UserId}",
+                userId
+            );
+
             return ServiceResult<List<Intern>>
                 .NotFound(
                     "Stajyer profili bulunamadı."
@@ -67,6 +76,12 @@ public class InternService : IInternService
 
         if (intern == null)
         {
+            _logger?.LogWarning(
+                "Intern was not found. InternId: {InternId}, UserId: {UserId}",
+                id,
+                userId
+            );
+
             return ServiceResult<Intern>.NotFound(
                 "Stajyer bulunamadı."
             );
@@ -81,6 +96,12 @@ public class InternService : IInternService
 
             if (currentIntern == null)
             {
+                _logger?.LogWarning(
+                    "Intern profile access failed because current intern profile was not found. RequestedInternId: {RequestedInternId}, UserId: {UserId}",
+                    id,
+                    userId
+                );
+
                 return ServiceResult<Intern>.NotFound(
                     "Stajyer profili bulunamadı."
                 );
@@ -88,6 +109,13 @@ public class InternService : IInternService
 
             if (currentIntern.Id != intern.Id)
             {
+                _logger?.LogWarning(
+                    "Unauthorized intern profile access attempt. RequestedInternId: {RequestedInternId}, CurrentInternId: {CurrentInternId}, UserId: {UserId}",
+                    id,
+                    currentIntern.Id,
+                    userId
+                );
+
                 return ServiceResult<Intern>.Forbidden(
                     "Bu stajyer profiline erişim yetkiniz yok."
                 );
@@ -109,18 +137,30 @@ public class InternService : IInternService
 
         if (department == null)
         {
+            _logger?.LogWarning(
+                "Intern creation rejected because department was not found. DepartmentId: {DepartmentId}",
+                dto.DepartmentId
+            );
+
             return ServiceResult.ValidationError(
                 "Departman bulunamadı."
             );
         }
 
+        var normalizedEmail =
+            dto.Email.Trim();
+
         var userEmailExists =
             await _userRepository.EmailExistsAsync(
-                dto.Email.Trim()
+                normalizedEmail
             );
 
         if (userEmailExists)
         {
+            _logger?.LogWarning(
+                "Intern creation rejected because user email already exists."
+            );
+
             return ServiceResult.Conflict(
                 "Bu email adresi zaten kayıtlı."
             );
@@ -128,11 +168,15 @@ public class InternService : IInternService
 
         var internEmailExists =
             await _internRepository.EmailExistsAsync(
-                dto.Email.Trim()
+                normalizedEmail
             );
 
         if (internEmailExists)
         {
+            _logger?.LogWarning(
+                "Intern creation rejected because intern email already exists."
+            );
+
             return ServiceResult.Conflict(
                 "Bu email adresine ait stajyer kaydı zaten mevcut."
             );
@@ -142,7 +186,7 @@ public class InternService : IInternService
         {
             Name = dto.Name.Trim(),
             Surname = dto.Surname.Trim(),
-            Email = dto.Email.Trim(),
+            Email = normalizedEmail,
             PasswordHash =
                 PasswordHasher.Hash(dto.Password),
             Role = "Intern",
@@ -153,7 +197,7 @@ public class InternService : IInternService
         {
             Name = dto.Name.Trim(),
             Surname = dto.Surname.Trim(),
-            Email = dto.Email.Trim(),
+            Email = normalizedEmail,
             DepartmentId = dto.DepartmentId,
             User = user
         };
@@ -161,6 +205,13 @@ public class InternService : IInternService
         user.Intern = intern;
 
         await _userRepository.AddAsync(user);
+
+        _logger?.LogInformation(
+            "Intern and user account created successfully. InternId: {InternId}, UserId: {UserId}, DepartmentId: {DepartmentId}",
+            intern.Id,
+            user.Id,
+            intern.DepartmentId
+        );
 
         return ServiceResult.Ok(
             "Stajyer ve kullanıcı hesabı başarıyla oluşturuldu."
@@ -178,6 +229,11 @@ public class InternService : IInternService
 
         if (intern == null)
         {
+            _logger?.LogWarning(
+                "Intern update failed because intern was not found. InternId: {InternId}",
+                id
+            );
+
             return ServiceResult.NotFound(
                 "Stajyer bulunamadı."
             );
@@ -190,6 +246,12 @@ public class InternService : IInternService
 
         if (department == null)
         {
+            _logger?.LogWarning(
+                "Intern update rejected because department was not found. InternId: {InternId}, DepartmentId: {DepartmentId}",
+                id,
+                dto.DepartmentId
+            );
+
             return ServiceResult.ValidationError(
                 "Departman bulunamadı."
             );
@@ -202,6 +264,12 @@ public class InternService : IInternService
 
         if (user == null)
         {
+            _logger?.LogWarning(
+                "Intern update failed because linked user account was not found. InternId: {InternId}, UserId: {UserId}",
+                id,
+                intern.UserId
+            );
+
             return ServiceResult.NotFound(
                 "Stajyere bağlı kullanıcı hesabı bulunamadı."
             );
@@ -225,6 +293,11 @@ public class InternService : IInternService
 
             if (userEmailExists)
             {
+                _logger?.LogWarning(
+                    "Intern update rejected because email is already used by another user. InternId: {InternId}",
+                    id
+                );
+
                 return ServiceResult.Conflict(
                     "Bu email adresi başka bir kullanıcı tarafından kullanılıyor."
                 );
@@ -237,6 +310,11 @@ public class InternService : IInternService
 
             if (internEmailExists)
             {
+                _logger?.LogWarning(
+                    "Intern update rejected because email is already used by another intern. InternId: {InternId}",
+                    id
+                );
+
                 return ServiceResult.Conflict(
                     "Bu email adresi başka bir stajyer tarafından kullanılıyor."
                 );
@@ -272,6 +350,13 @@ public class InternService : IInternService
             user
         );
 
+        _logger?.LogInformation(
+            "Intern updated successfully. InternId: {InternId}, UserId: {UserId}, DepartmentId: {DepartmentId}",
+            intern.Id,
+            user.Id,
+            intern.DepartmentId
+        );
+
         return ServiceResult.Ok(
             "Stajyer bilgileri başarıyla güncellendi."
         );
@@ -285,6 +370,11 @@ public class InternService : IInternService
 
         if (intern == null)
         {
+            _logger?.LogWarning(
+                "Intern deletion failed because intern was not found. InternId: {InternId}",
+                id
+            );
+
             return ServiceResult.NotFound(
                 "Stajyer bulunamadı."
             );
@@ -297,6 +387,12 @@ public class InternService : IInternService
 
         if (user == null)
         {
+            _logger?.LogWarning(
+                "Intern deletion failed because linked user account was not found. InternId: {InternId}, UserId: {UserId}",
+                id,
+                intern.UserId
+            );
+
             return ServiceResult.NotFound(
                 "Stajyere bağlı kullanıcı hesabı bulunamadı."
             );
@@ -304,6 +400,12 @@ public class InternService : IInternService
 
         await _userRepository.DeleteAsync(
             user
+        );
+
+        _logger?.LogInformation(
+            "Intern and linked user account deleted successfully. InternId: {InternId}, UserId: {UserId}",
+            intern.Id,
+            user.Id
         );
 
         return ServiceResult.Ok(
