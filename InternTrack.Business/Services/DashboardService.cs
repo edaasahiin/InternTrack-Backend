@@ -2,6 +2,7 @@ using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.DataAccess.Interfaces;
+using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -10,11 +11,13 @@ public class DashboardService : IDashboardService
     private readonly IInternRepository _internRepository;
     private readonly ITaskRepository _taskRepository;
     private readonly IDepartmentRepository _departmentRepository;
+    private readonly ILogger<DashboardService>? _logger;
 
     public DashboardService(
         IInternRepository internRepository,
         ITaskRepository taskRepository,
-        IDepartmentRepository departmentRepository)
+        IDepartmentRepository departmentRepository,
+        ILogger<DashboardService>? logger = null)
     {
         _internRepository =
             internRepository;
@@ -24,6 +27,9 @@ public class DashboardService : IDashboardService
 
         _departmentRepository =
             departmentRepository;
+
+        _logger =
+            logger;
     }
 
     public async Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(
@@ -117,6 +123,11 @@ public class DashboardService : IDashboardService
 
         if (intern == null)
         {
+            _logger?.LogWarning(
+                "Dashboard statistics could not be retrieved because intern profile was not found. UserId: {UserId}",
+                userId
+            );
+
             return ServiceResult<DashboardStatsDto>
                 .NotFound(
                     "Stajyer kaydı bulunamadı."
