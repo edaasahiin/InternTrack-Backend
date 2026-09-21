@@ -669,4 +669,111 @@ public class AuthServiceTests
                 repository.RevokeAllByUserIdAsync(It.IsAny<int>()),
             Times.Never);
     }
+
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, 0)]
+    [InlineData(false, 7)]
+    [InlineData(true, 7)]
+    public async Task TokenIssuance_ShouldPreserveOperationOrderAndReturnRawToken(bool isRefresh, int lifetimeDays)
+    {
+        var calls = new List<string>();
+        var userRepository = new Mock<IUserRepository>();
+        var departmentRepository = new Mock<IDepartmentRepository>();
+        var tokenService = new Mock<ITokenService>();
+        var refreshTokenRepository = new Mock<IRefreshTokenRepository>();
+        var configuration = new Mock<IConfiguration>();
+        var settings = CreateConfiguration(lifetimeDays);
+        var user = CreateUser();
+        user.Avatar = "avatar";
+        user.MustChangePassword = true;
+        var storedToken = new RefreshToken
+        {
+            Token = "stored-old-hash",
+            UserId = user.Id,
+            CreatedAt = DateTime.UtcNow.AddDays(-1),
+            ExpiresAt = DateTime.UtcNow.AddDays(1)
+        };
+
+        userRepository.Setup(repository => repository.GetByEmailAsync(user.Email))
+            .Callback(() => calls.Add("email lookup"))
+            .ReturnsAsync(user);
+        refreshTokenRepository.Setup(repository => repository.GetByTokenAsync("old-raw-token"))
+            .Callback(() => calls.Add("token lookup"))
+            .ReturnsAsync(storedToken);
+        userRepository.Setup(repository => repository.GetByIdAsync(user.Id))
+            .Callback(() => calls.Add("user lookup"))
+            .ReturnsAsync(user);
+        refreshTokenRepository.Setup(repository => repository.UpdateAsync(storedToken))
+            .Callback(() =>
+            {
+                Assert.NotNull(storedToken.RevokedAt);
+                Assert.Equal("stored-old-hash", storedToken.Token);
+                calls.Add("revoke old token");
+            })
+            .Returns(Task.CompletedTask);
+        tokenService.Setup(service => service.CreateAccessToken(user))
+            .Callback(() => calls.Add("access token"))
+            .Returns("new-access-token");
+        tokenService.Setup(service => service.CreateRefreshToken())
+            .Callback(() => calls.Add("refresh token"))
+            .Returns("new-raw-token");
+        configuration.Setup(config => config.GetSection("Jwt:RefreshTokenDays"))
+            .Callback(() => calls.Add("lifetime validation"))
+            .Returns(settings.GetSection("Jwt:RefreshTokenDays"));
+        refreshTokenRepository.Setup(repository => repository.AddAsync(It.IsAny<RefreshToken>()))
+            .Callback<RefreshToken>(token =>
+            {
+                Assert.Equal("new-raw-token", token.Token);
+                Assert.Equal(user.Id, token.UserId);
+                Assert.Null(token.RevokedAt);
+                Assert.InRange((token.ExpiresAt - token.CreatedAt).TotalDays, lifetimeDays, lifetimeDays + 0.01);
+                token.Token = "stored-new-hash";
+                calls.Add("persist new token");
+            })
+            .Returns(Task.CompletedTask);
+        var service = new AuthService(
+            userRepository.Object,
+            departmentRepository.Object,
+            tokenService.Object,
+            refreshTokenRepository.Object,
+            configuration.Object);
+
+        Task<ServiceResult<LoginResponseDto>> IssueTokens() => isRefresh
+            ? service.RefreshAsync("old-raw-token")
+            : service.LoginAsync(new LoginDto { Email = user.Email, Password = "CorrectPassword" });
+
+        if (lifetimeDays == 0)
+        {
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(IssueTokens);
+            Assert.Equal("Refresh token süresi geçerli değil.", exception.Message);
+            refreshTokenRepository.Verify(repository => repository.AddAsync(It.IsAny<RefreshToken>()), Times.Never);
+        }
+        else
+        {
+            var result = await IssueTokens();
+            Assert.True(result.Success);
+            Assert.NotNull(result.Data);
+            Assert.Equal("new-raw-token", result.Data.RefreshToken);
+            Assert.Equal("new-access-token", result.Data.AccessToken);
+            Assert.Equal(user.Name, result.Data.Name);
+            Assert.Equal(user.Surname, result.Data.Surname);
+            Assert.Equal(user.Email, result.Data.Email);
+            Assert.Equal(user.Role, result.Data.Role);
+            Assert.Equal(user.Avatar, result.Data.Avatar);
+            Assert.True(result.Data.MustChangePassword);
+        }
+
+        var expectedCalls = isRefresh
+            ? new List<string> { "token lookup", "user lookup", "revoke old token" }
+            : new List<string> { "email lookup" };
+        expectedCalls.AddRange(new[] { "access token", "refresh token", "lifetime validation" });
+        if (lifetimeDays > 0)
+        {
+            expectedCalls.Add("persist new token");
+        }
+
+        Assert.Equal(expectedCalls, calls);
+        refreshTokenRepository.Verify(repository => repository.RevokeAllByUserIdAsync(It.IsAny<int>()), Times.Never);
+    }
 }

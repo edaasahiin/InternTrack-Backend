@@ -1,3 +1,4 @@
+using InternTrack.Core.Constants;
 using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
@@ -30,764 +31,348 @@ public class AuthService : IAuthService
         IConfiguration configuration,
         ILogger<AuthService>? logger = null)
     {
-        _userRepository =
-            userRepository;
-
-        _departmentRepository =
-            departmentRepository;
-
-        _tokenService =
-            tokenService;
-
-        _refreshTokenRepository =
-            refreshTokenRepository;
-
-        _configuration =
-            configuration;
-
-        _logger =
-            logger;
+        _userRepository = userRepository;
+        _departmentRepository = departmentRepository;
+        _tokenService = tokenService;
+        _refreshTokenRepository = refreshTokenRepository;
+        _configuration = configuration;
+        _logger = logger;
     }
 
-    private static bool IsInactiveIntern(
-        User user)
+    private static bool IsInactiveIntern(User user)
     {
-        return
-            user.Role.Equals(
-                "Intern",
-                StringComparison.OrdinalIgnoreCase
-            ) &&
-            (
-                user.Intern == null ||
-                !user.Intern.IsActive
-            );
+        return user.Role.Equals(
+            Roles.Intern,
+            StringComparison.OrdinalIgnoreCase) && (user.Intern == null || !user.Intern.IsActive);
     }
 
-    public async Task<ServiceResult> RegisterAsync(
-        RegisterDto dto)
+    public async Task<ServiceResult> RegisterAsync(RegisterDto dto)
     {
-        var department =
-            await _departmentRepository
-                .GetByIdAsync(
-                    dto.DepartmentId
-                );
+        var department = await _departmentRepository.GetByIdAsync(dto.DepartmentId);
 
         if (department == null)
         {
             _logger?.LogWarning(
                 "Registration rejected because department was not found. DepartmentId: {DepartmentId}",
-                dto.DepartmentId
-            );
+                dto.DepartmentId);
 
-            return ServiceResult
-                .ValidationError(
-                    "Departman bulunamadı."
-                );
+            return ServiceResult.ValidationError("Departman bulunamadı.");
         }
 
-        var emailExists =
-            await _userRepository
-                .EmailExistsAsync(
-                    dto.Email
-                );
+        var emailExists = await _userRepository.EmailExistsAsync(dto.Email);
 
         if (emailExists)
         {
-            _logger?.LogWarning(
-                "Registration rejected because email is already registered."
-            );
+            _logger?.LogWarning("Registration rejected because email is already registered.");
 
-            return ServiceResult
-                .Conflict(
-                    "Bu email adresi zaten kayıtlı."
-                );
+            return ServiceResult.Conflict("Bu email adresi zaten kayıtlı.");
         }
 
-        var user =
-            new User
-            {
-                Name =
-                    dto.Name.Trim(),
+        var user = new User
+        {
+            Name = dto.Name.Trim(),
+            Surname = dto.Surname.Trim(),
+            Email = dto.Email.Trim(),
+            PasswordHash = PasswordHasher.Hash(dto.Password),
+            Role = Roles.Intern,
+            MustChangePassword = false
+        };
 
-                Surname =
-                    dto.Surname.Trim(),
+        var intern = new Intern
+        {
+            Name = dto.Name.Trim(),
+            Surname = dto.Surname.Trim(),
+            Email = dto.Email.Trim(),
+            DepartmentId = dto.DepartmentId,
+            User = user
+        };
 
-                Email =
-                    dto.Email.Trim(),
-
-                PasswordHash =
-                    PasswordHasher.Hash(
-                        dto.Password
-                    ),
-
-                Role =
-                    "Intern",
-
-                MustChangePassword =
-                    false
-            };
-
-        var intern =
-            new Intern
-            {
-                Name =
-                    dto.Name.Trim(),
-
-                Surname =
-                    dto.Surname.Trim(),
-
-                Email =
-                    dto.Email.Trim(),
-
-                DepartmentId =
-                    dto.DepartmentId,
-
-                User =
-                    user
-            };
-
-        user.Intern =
-            intern;
-
-        await _userRepository
-            .AddAsync(
-                user
-            );
-
+        user.Intern = intern;
+        await _userRepository.AddAsync(user);
         _logger?.LogInformation(
             "Intern account registered successfully. UserId: {UserId}, DepartmentId: {DepartmentId}",
             user.Id,
-            dto.DepartmentId
-        );
+            dto.DepartmentId);
 
-        return ServiceResult.Ok(
-            "Stajyer hesabı başarıyla oluşturuldu."
-        );
+        return ServiceResult.Ok("Stajyer hesabı başarıyla oluşturuldu.");
     }
 
-    public async Task<
-        ServiceResult<LoginResponseDto>
-    > LoginAsync(
-        LoginDto dto)
+    public async Task<ServiceResult<LoginResponseDto>> LoginAsync(LoginDto dto)
     {
-        var user =
-            await _userRepository
-                .GetByEmailAsync(
-                    dto.Email
-                );
+        var user = await _userRepository.GetByEmailAsync(dto.Email);
 
         if (user == null)
         {
-            _logger?.LogWarning(
-                "Login rejected because credentials are invalid."
-            );
+            _logger?.LogWarning("Login rejected because credentials are invalid.");
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Email veya şifre hatalı."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Email veya şifre hatalı.");
         }
 
-        var passwordIsCorrect =
-            PasswordHasher.Verify(
-                dto.Password,
-                user.PasswordHash
-            );
+        var passwordIsCorrect = PasswordHasher.Verify(dto.Password, user.PasswordHash);
 
         if (!passwordIsCorrect)
         {
-            _logger?.LogWarning(
-                "Login rejected because credentials are invalid. UserId: {UserId}",
-                user.Id
-            );
+            _logger?.LogWarning("Login rejected because credentials are invalid. UserId: {UserId}", user.Id);
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Email veya şifre hatalı."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Email veya şifre hatalı.");
         }
 
-        if (
-            IsInactiveIntern(
-                user
-            )
-        )
+        if (IsInactiveIntern(user))
         {
-            _logger?.LogWarning(
-                "Login rejected because intern account is inactive. UserId: {UserId}",
-                user.Id
-            );
+            _logger?.LogWarning("Login rejected because intern account is inactive. UserId: {UserId}", user.Id);
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Hesabınız pasif durumda. Giriş yapamazsınız."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Hesabınız pasif durumda. Giriş yapamazsınız.");
         }
 
-        var accessToken =
-            _tokenService
-                .CreateAccessToken(
-                    user
-                );
+        var accessToken = _tokenService.CreateAccessToken(user);
+        var refreshTokenValue = _tokenService.CreateRefreshToken();
+        var refreshTokenDays = GetRefreshTokenLifetimeDays();
 
-        var refreshTokenValue =
-            _tokenService
-                .CreateRefreshToken();
+        var refreshToken = CreateRefreshTokenEntity(refreshTokenValue, user, refreshTokenDays);
 
-        var refreshTokenDays =
-            _configuration
-                .GetValue<int>(
-                    "Jwt:RefreshTokenDays"
-                );
+        await _refreshTokenRepository.AddAsync(refreshToken);
+        var response = CreateLoginResponse(user, accessToken, refreshTokenValue);
 
-        if (refreshTokenDays <= 0)
-        {
-            throw new InvalidOperationException(
-                "Refresh token süresi geçerli değil."
-            );
-        }
+        _logger?.LogInformation("User logged in successfully. UserId: {UserId}, Role: {Role}", user.Id, user.Role);
 
-        var refreshToken =
-            new RefreshToken
-            {
-                Token =
-                    refreshTokenValue,
-
-                CreatedAt =
-                    DateTime.UtcNow,
-
-                ExpiresAt =
-                    DateTime.UtcNow.AddDays(
-                        refreshTokenDays
-                    ),
-
-                UserId =
-                    user.Id
-            };
-
-        await _refreshTokenRepository
-            .AddAsync(
-                refreshToken
-            );
-
-        var response =
-            new LoginResponseDto
-            {
-                AccessToken =
-                    accessToken,
-
-                RefreshToken =
-                    refreshTokenValue,
-
-                Name =
-                    user.Name,
-
-                Surname =
-                    user.Surname,
-
-                Avatar =
-                    user.Avatar,
-
-                Email =
-                    user.Email,
-
-                Role =
-                    user.Role,
-
-                MustChangePassword =
-                    user.MustChangePassword
-            };
-
-        _logger?.LogInformation(
-            "User logged in successfully. UserId: {UserId}, Role: {Role}",
-            user.Id,
-            user.Role
-        );
-
-        return ServiceResult<
-            LoginResponseDto
-        >.Ok(
-            response
-        );
+        return ServiceResult<LoginResponseDto>.Ok(response);
     }
 
-    public async Task<
-        ServiceResult<LoginResponseDto>
-    > RefreshAsync(
-        string refreshToken)
+    public async Task<ServiceResult<LoginResponseDto>> RefreshAsync(string refreshToken)
     {
-        var storedRefreshToken =
-            await _refreshTokenRepository
-                .GetByTokenAsync(
-                    refreshToken
-                );
+        var storedRefreshToken = await _refreshTokenRepository.GetByTokenAsync(refreshToken);
 
         if (storedRefreshToken == null)
         {
-            _logger?.LogWarning(
-                "Token refresh rejected because refresh token was not found."
-            );
+            _logger?.LogWarning("Token refresh rejected because refresh token was not found.");
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Refresh token geçersiz."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Refresh token geçersiz.");
         }
 
-        if (
-            storedRefreshToken.RevokedAt
-            != null
-        )
+        if (storedRefreshToken.RevokedAt != null)
         {
             _logger?.LogWarning(
                 "Token refresh rejected because refresh token was revoked. UserId: {UserId}",
-                storedRefreshToken.UserId
-            );
+                storedRefreshToken.UserId);
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Refresh token iptal edilmiş."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Refresh token iptal edilmiş.");
         }
 
-        if (
-            storedRefreshToken.ExpiresAt
-            <= DateTime.UtcNow
-        )
+        if (storedRefreshToken.ExpiresAt <= DateTime.UtcNow)
         {
             _logger?.LogWarning(
                 "Token refresh rejected because refresh token expired. UserId: {UserId}",
-                storedRefreshToken.UserId
-            );
+                storedRefreshToken.UserId);
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Refresh token süresi dolmuş."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Refresh token süresi dolmuş.");
         }
 
-        var currentUser =
-            await _userRepository
-                .GetByIdAsync(
-                    storedRefreshToken.UserId
-                );
+        var currentUser = await _userRepository.GetByIdAsync(storedRefreshToken.UserId);
 
         if (currentUser == null)
         {
             _logger?.LogWarning(
                 "Token refresh rejected because associated user was not found. UserId: {UserId}",
-                storedRefreshToken.UserId
-            );
+                storedRefreshToken.UserId);
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Refresh token kullanıcısı bulunamadı."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Refresh token kullanıcısı bulunamadı.");
         }
 
-        if (
-            IsInactiveIntern(
-                currentUser
-            )
-        )
+        if (IsInactiveIntern(currentUser))
         {
-            await _refreshTokenRepository
-                .RevokeAllByUserIdAsync(
-                    currentUser.Id
-                );
-
+            await _refreshTokenRepository.RevokeAllByUserIdAsync(currentUser.Id);
             _logger?.LogWarning(
                 "Token refresh rejected because intern account is inactive. UserId: {UserId}",
-                currentUser.Id
-            );
+                currentUser.Id);
 
-            return ServiceResult<
-                LoginResponseDto
-            >.ValidationError(
-                "Hesabınız pasif durumda. Oturum yenilenemez."
-            );
+            return ServiceResult<LoginResponseDto>.ValidationError("Hesabınız pasif durumda. Oturum yenilenemez.");
         }
 
-        storedRefreshToken.RevokedAt =
-            DateTime.UtcNow;
+        storedRefreshToken.RevokedAt = DateTime.UtcNow;
+        await _refreshTokenRepository.UpdateAsync(storedRefreshToken);
+        var newAccessToken = _tokenService.CreateAccessToken(currentUser);
+        var newRefreshTokenValue = _tokenService.CreateRefreshToken();
+        var refreshTokenDays = GetRefreshTokenLifetimeDays();
 
-        await _refreshTokenRepository
-            .UpdateAsync(
-                storedRefreshToken
-            );
+        var newRefreshToken = CreateRefreshTokenEntity(newRefreshTokenValue, currentUser, refreshTokenDays);
 
-        var newAccessToken =
-            _tokenService
-                .CreateAccessToken(
-                    currentUser
-                );
+        await _refreshTokenRepository.AddAsync(newRefreshToken);
+        var response = CreateLoginResponse(currentUser, newAccessToken, newRefreshTokenValue);
 
-        var newRefreshTokenValue =
-            _tokenService
-                .CreateRefreshToken();
+        _logger?.LogInformation("Authentication tokens refreshed successfully. UserId: {UserId}", currentUser.Id);
 
-        var refreshTokenDays =
-            _configuration
-                .GetValue<int>(
-                    "Jwt:RefreshTokenDays"
-                );
-
-        if (refreshTokenDays <= 0)
-        {
-            throw new InvalidOperationException(
-                "Refresh token süresi geçerli değil."
-            );
-        }
-
-        var newRefreshToken =
-            new RefreshToken
-            {
-                Token =
-                    newRefreshTokenValue,
-
-                CreatedAt =
-                    DateTime.UtcNow,
-
-                ExpiresAt =
-                    DateTime.UtcNow.AddDays(
-                        refreshTokenDays
-                    ),
-
-                UserId =
-                    currentUser.Id
-            };
-
-        await _refreshTokenRepository
-            .AddAsync(
-                newRefreshToken
-            );
-
-        var response =
-            new LoginResponseDto
-            {
-                AccessToken =
-                    newAccessToken,
-
-                RefreshToken =
-                    newRefreshTokenValue,
-
-                Name =
-                    currentUser.Name,
-
-                Surname =
-                    currentUser.Surname,
-
-                Avatar =
-                    currentUser.Avatar,
-
-                Email =
-                    currentUser.Email,
-
-                Role =
-                    currentUser.Role,
-
-                MustChangePassword =
-                    currentUser
-                        .MustChangePassword
-            };
-
-        _logger?.LogInformation(
-            "Authentication tokens refreshed successfully. UserId: {UserId}",
-            currentUser.Id
-        );
-
-        return ServiceResult<
-            LoginResponseDto
-        >.Ok(
-            response
-        );
+        return ServiceResult<LoginResponseDto>.Ok(response);
     }
 
-    public async Task<ServiceResult> LogoutAsync(
-        string refreshToken)
+    public async Task<ServiceResult> LogoutAsync(string refreshToken)
     {
-        var storedRefreshToken =
-            await _refreshTokenRepository
-                .GetByTokenAsync(
-                    refreshToken
-                );
+        var storedRefreshToken = await _refreshTokenRepository.GetByTokenAsync(refreshToken);
 
         if (storedRefreshToken == null)
         {
-            _logger?.LogWarning(
-                "Logout request rejected because refresh token was not found."
-            );
+            _logger?.LogWarning("Logout request rejected because refresh token was not found.");
 
-            return ServiceResult
-                .ValidationError(
-                    "Refresh token geçersiz."
-                );
+            return ServiceResult.ValidationError("Refresh token geçersiz.");
         }
 
-        if (
-            storedRefreshToken.RevokedAt
-            != null
-        )
+        if (storedRefreshToken.RevokedAt != null)
         {
             _logger?.LogInformation(
                 "Logout requested for an already revoked session. UserId: {UserId}",
-                storedRefreshToken.UserId
-            );
+                storedRefreshToken.UserId);
 
-            return ServiceResult.Ok(
-                "Oturum zaten sonlandırılmış."
-            );
+            return ServiceResult.Ok("Oturum zaten sonlandırılmış.");
         }
 
-        storedRefreshToken.RevokedAt =
-            DateTime.UtcNow;
+        storedRefreshToken.RevokedAt = DateTime.UtcNow;
+        await _refreshTokenRepository.UpdateAsync(storedRefreshToken);
+        _logger?.LogInformation("User logged out successfully. UserId: {UserId}", storedRefreshToken.UserId);
 
-        await _refreshTokenRepository
-            .UpdateAsync(
-                storedRefreshToken
-            );
-
-        _logger?.LogInformation(
-            "User logged out successfully. UserId: {UserId}",
-            storedRefreshToken.UserId
-        );
-
-        return ServiceResult.Ok(
-            "Çıkış başarılı."
-        );
+        return ServiceResult.Ok("Çıkış başarılı.");
     }
 
-    public async Task<ServiceResult>
-        UpdateAvatarAsync(
-            int userId,
-            string? avatar)
+    public async Task<ServiceResult> UpdateAvatarAsync(int userId, string? avatar)
     {
-        var user =
-            await _userRepository
-                .GetByIdAsync(
-                    userId
-                );
+        var user = await _userRepository.GetByIdAsync(userId);
 
         if (user == null)
         {
-            _logger?.LogWarning(
-                "Avatar update rejected because user was not found. UserId: {UserId}",
-                userId
-            );
+            _logger?.LogWarning("Avatar update rejected because user was not found. UserId: {UserId}", userId);
 
-            return ServiceResult
-                .ValidationError(
-                    "Kullanıcı bulunamadı."
-                );
+            return ServiceResult.ValidationError("Kullanıcı bulunamadı.");
         }
 
-        user.Avatar =
-            string.IsNullOrWhiteSpace(
-                avatar
-            )
-                ? null
-                : avatar.Trim();
+        user.Avatar = string.IsNullOrWhiteSpace(avatar) ? null : avatar.Trim();
+        await _userRepository.UpdateAsync(user);
+        _logger?.LogInformation("User avatar updated successfully. UserId: {UserId}", userId);
 
-        await _userRepository
-            .UpdateAsync(
-                user
-            );
-
-        _logger?.LogInformation(
-            "User avatar updated successfully. UserId: {UserId}",
-            userId
-        );
-
-        return ServiceResult.Ok(
-            "Avatar başarıyla güncellendi."
-        );
+        return ServiceResult.Ok("Avatar başarıyla güncellendi.");
     }
 
-    public async Task<ServiceResult>
-        ChangePasswordAsync(
-            int userId,
-            ChangePasswordDto dto)
+    public async Task<ServiceResult> ChangePasswordAsync(int userId, ChangePasswordDto dto)
     {
-        var user =
-            await _userRepository
-                .GetByIdAsync(
-                    userId
-                );
+        var user = await _userRepository.GetByIdAsync(userId);
 
         if (user == null)
         {
-            _logger?.LogWarning(
-                "Password change rejected because user was not found. UserId: {UserId}",
-                userId
-            );
+            _logger?.LogWarning("Password change rejected because user was not found. UserId: {UserId}", userId);
 
-            return ServiceResult
-                .ValidationError(
-                    "Kullanıcı bulunamadı."
-                );
+            return ServiceResult.ValidationError("Kullanıcı bulunamadı.");
         }
 
-        var currentPasswordIsCorrect =
-            PasswordHasher.Verify(
-                dto.CurrentPassword,
-                user.PasswordHash
-            );
+        var currentPasswordIsCorrect = PasswordHasher.Verify(dto.CurrentPassword, user.PasswordHash);
 
         if (!currentPasswordIsCorrect)
         {
             _logger?.LogWarning(
                 "Password change rejected because current password is incorrect. UserId: {UserId}",
-                userId
-            );
+                userId);
 
-            return ServiceResult
-                .ValidationError(
-                    "Mevcut şifre hatalı."
-                );
+            return ServiceResult.ValidationError("Mevcut şifre hatalı.");
         }
 
-        var newPasswordIsSameAsCurrent =
-            PasswordHasher.Verify(
-                dto.NewPassword,
-                user.PasswordHash
-            );
+        var newPasswordIsSameAsCurrent = PasswordHasher.Verify(dto.NewPassword, user.PasswordHash);
 
         if (newPasswordIsSameAsCurrent)
         {
             _logger?.LogWarning(
                 "Password change rejected because new password matches current password. UserId: {UserId}",
-                userId
-            );
+                userId);
 
-            return ServiceResult
-                .ValidationError(
-                    "Yeni şifre mevcut şifreden farklı olmalıdır."
-                );
+            return ServiceResult.ValidationError("Yeni şifre mevcut şifreden farklı olmalıdır.");
         }
 
-        user.PasswordHash =
-            PasswordHasher.Hash(
-                dto.NewPassword
-            );
-
-        user.MustChangePassword =
-            false;
-
-        await _userRepository
-            .UpdateAsync(
-                user
-            );
-
-        await _refreshTokenRepository
-            .RevokeAllByUserIdAsync(
-                userId
-            );
-
+        user.PasswordHash = PasswordHasher.Hash(dto.NewPassword);
+        user.MustChangePassword = false;
+        await _userRepository.UpdateAsync(user);
+        await _refreshTokenRepository.RevokeAllByUserIdAsync(userId);
         _logger?.LogInformation(
             "Password changed successfully and active refresh tokens were revoked. UserId: {UserId}",
-            userId
-        );
+            userId);
 
-        return ServiceResult.Ok(
-            "Şifre başarıyla değiştirildi."
-        );
+        return ServiceResult.Ok("Şifre başarıyla değiştirildi.");
     }
 
-    public async Task<ServiceResult>
-        UpdateProfileAsync(
-            int userId,
-            UpdateProfileDto dto)
+    public async Task<ServiceResult> UpdateProfileAsync(int userId, UpdateProfileDto dto)
     {
-        var user =
-            await _userRepository
-                .GetByIdAsync(
-                    userId
-                );
+        var user = await _userRepository.GetByIdAsync(userId);
 
         if (user == null)
         {
-            _logger?.LogWarning(
-                "Profile update rejected because user was not found. UserId: {UserId}",
-                userId
-            );
+            _logger?.LogWarning("Profile update rejected because user was not found. UserId: {UserId}", userId);
 
-            return ServiceResult
-                .ValidationError(
-                    "Kullanıcı bulunamadı."
-                );
+            return ServiceResult.ValidationError("Kullanıcı bulunamadı.");
         }
 
-        var normalizedEmail =
-            dto.Email.Trim();
-
-        var emailChanged =
-            !user.Email.Equals(
-                normalizedEmail,
-                StringComparison.OrdinalIgnoreCase
-            );
+        var normalizedEmail = dto.Email.Trim();
+        var emailChanged = !user.Email.Equals(normalizedEmail, StringComparison.OrdinalIgnoreCase);
 
         if (emailChanged)
         {
-            var emailExists =
-                await _userRepository
-                    .EmailExistsAsync(
-                        normalizedEmail
-                    );
+            var emailExists = await _userRepository.EmailExistsAsync(normalizedEmail);
 
             if (emailExists)
             {
                 _logger?.LogWarning(
                     "Profile update rejected because email is already used by another user. UserId: {UserId}",
-                    userId
-                );
+                    userId);
 
-                return ServiceResult
-                    .Conflict(
-                        "Bu email adresi başka bir kullanıcı tarafından kullanılıyor."
-                    );
+                return ServiceResult.Conflict("Bu email adresi başka bir kullanıcı tarafından kullanılıyor.");
             }
         }
 
-        user.Name =
-            dto.Name.Trim();
-
-        user.Surname =
-            dto.Surname.Trim();
-
-        user.Email =
-            normalizedEmail;
+        user.Name = dto.Name.Trim();
+        user.Surname = dto.Surname.Trim();
+        user.Email = normalizedEmail;
 
         if (user.Intern != null)
         {
-            user.Intern.Name =
-                dto.Name.Trim();
-
-            user.Intern.Surname =
-                dto.Surname.Trim();
-
-            user.Intern.Email =
-                normalizedEmail;
+            user.Intern.Name = dto.Name.Trim();
+            user.Intern.Surname = dto.Surname.Trim();
+            user.Intern.Email = normalizedEmail;
         }
 
-        await _userRepository
-            .UpdateAsync(
-                user
-            );
+        await _userRepository.UpdateAsync(user);
+        _logger?.LogInformation("User profile updated successfully. UserId: {UserId}", userId);
 
-        _logger?.LogInformation(
-            "User profile updated successfully. UserId: {UserId}",
-            userId
-        );
+        return ServiceResult.Ok("Profil başarıyla güncellendi.");
+    }
 
-        return ServiceResult.Ok(
-            "Profil başarıyla güncellendi."
-        );
+    private int GetRefreshTokenLifetimeDays()
+    {
+        var refreshTokenDays = _configuration.GetValue<int>("Jwt:RefreshTokenDays");
+
+        if (refreshTokenDays <= 0)
+        {
+            throw new InvalidOperationException("Refresh token süresi geçerli değil.");
+        }
+
+        return refreshTokenDays;
+    }
+
+    private static RefreshToken CreateRefreshTokenEntity(string rawToken, User user, int refreshTokenDays)
+    {
+        return new RefreshToken
+        {
+            Token = rawToken,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(refreshTokenDays),
+            UserId = user.Id
+        };
+    }
+
+    private static LoginResponseDto CreateLoginResponse(User user, string accessToken, string rawRefreshToken)
+    {
+        return new LoginResponseDto
+        {
+            AccessToken = accessToken,
+            RefreshToken = rawRefreshToken,
+            Name = user.Name,
+            Surname = user.Surname,
+            Avatar = user.Avatar,
+            Email = user.Email,
+            Role = user.Role,
+            MustChangePassword = user.MustChangePassword
+        };
     }
 }

@@ -1,5 +1,6 @@
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
+using InternTrack.Core.Constants;
 using InternTrack.Core.DTOs;
 using InternTrack.DataAccess.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -178,7 +179,7 @@ public class AuthController : ControllerBase
 
         if (
             user.Role.Equals(
-                "Intern",
+                Roles.Intern,
                 StringComparison.OrdinalIgnoreCase
             ) &&
             (

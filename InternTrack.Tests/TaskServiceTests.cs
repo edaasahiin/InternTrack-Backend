@@ -1291,4 +1291,62 @@ public class TaskServiceTests
             repository => repository.RestoreAsync(task),
             Times.Once);
     }
+
+    [Fact]
+    public async Task UpdateAsync_InternUpdatingAssignedTask_ShouldPreserveManagementFields()
+    {
+        var taskRepository = new Mock<ITaskRepository>();
+        var internRepository = new Mock<IInternRepository>();
+        var dueDate = DateTime.UtcNow.AddDays(2);
+        var task = new TaskItem
+        {
+            Id = 5,
+            Title = "Original title",
+            Description = "Original description",
+            Status = "InProgress",
+            Priority = "Low",
+            DueDate = dueDate,
+            InternId = 3,
+            CreatedByUserId = 1,
+            CanInternDeleteWhenCompleted = false,
+            IsActive = true
+        };
+        var intern = new Intern
+        {
+            Id = 3,
+            UserId = 10,
+            Name = "Intern",
+            Email = "intern@example.com"
+        };
+        taskRepository.Setup(repository => repository.GetByIdAsync(5)).ReturnsAsync(task);
+        internRepository.Setup(repository => repository.GetByUserIdAsync(10)).ReturnsAsync(intern);
+        var service = new TaskService(taskRepository.Object, internRepository.Object);
+        var dto = new UpdateTaskDto
+        {
+            Title = "Changed title",
+            Description = "Changed description",
+            Status = "Done",
+            Priority = "High",
+            DueDate = DateTime.UtcNow.AddDays(-1),
+            InternId = 99,
+            CanInternDeleteWhenCompleted = true,
+            IsActive = false
+        };
+
+        var result = await service.UpdateAsync(5, dto, 10, "Intern");
+
+        Assert.True(result.Success);
+        Assert.Equal("Done", task.Status);
+        Assert.NotNull(task.CompletedAt);
+        Assert.Equal("Original title", task.Title);
+        Assert.Equal("Original description", task.Description);
+        Assert.Equal("Low", task.Priority);
+        Assert.Equal(dueDate, task.DueDate);
+        Assert.Equal(3, task.InternId);
+        Assert.False(task.CanInternDeleteWhenCompleted);
+        Assert.True(task.IsActive);
+        taskRepository.Verify(repository => repository.UpdateAsync(task), Times.Once);
+        taskRepository.Verify(repository => repository.GetByIdIncludingInactiveAsync(It.IsAny<int>()), Times.Never);
+        internRepository.Verify(repository => repository.GetByIdAsync(It.IsAny<int>()), Times.Never);
+    }
 }
