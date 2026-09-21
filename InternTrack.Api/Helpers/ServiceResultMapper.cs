@@ -18,43 +18,25 @@ public static class ServiceResultMapper
                 return controller.NoContent();
             }
 
-            return controller.StatusCode(
-                successStatusCode,
-                new
-                {
-                    message = result.Message
-                }
-            );
+            return controller.StatusCode(successStatusCode, new { message = result.Message });
         }
 
         return result.Type switch
         {
-            ResultType.NotFound => controller.NotFound(
-                new { message = result.Message }
-            ),
+            ResultType.NotFound => controller.NotFound(new { message = result.Message }),
 
-            ResultType.ValidationError => controller.BadRequest(
-                new { message = result.Message }
-            ),
+            ResultType.ValidationError => controller.BadRequest(new { message = result.Message }),
 
-            ResultType.Conflict => controller.Conflict(
-                new { message = result.Message }
-            ),
+            ResultType.Conflict => controller.Conflict(new { message = result.Message }),
 
             ResultType.Forbidden => controller.StatusCode(
                 StatusCodes.Status403Forbidden,
-                new { message = result.Message }
-            ),
+                new { message = result.Message }),
 
-            _ => controller.BadRequest(
-                new { message = result.Message }
-            )
-        };
+            _ => controller.BadRequest(new { message = result.Message })};
     }
 
-    public static IActionResult ToActionResult<T>(
-        ControllerBase controller,
-        ServiceResult<T> result)
+    public static IActionResult ToActionResult<T>(ControllerBase controller, ServiceResult<T> result)
     {
         if (result.Type == ResultType.Success)
         {
@@ -63,26 +45,16 @@ public static class ServiceResultMapper
 
         return result.Type switch
         {
-            ResultType.NotFound => controller.NotFound(
-                new { message = result.Message }
-            ),
+            ResultType.NotFound => controller.NotFound(new { message = result.Message }),
 
-            ResultType.ValidationError => controller.BadRequest(
-                new { message = result.Message }
-            ),
+            ResultType.ValidationError => controller.BadRequest(new { message = result.Message }),
 
-            ResultType.Conflict => controller.Conflict(
-                new { message = result.Message }
-            ),
+            ResultType.Conflict => controller.Conflict(new { message = result.Message }),
 
             ResultType.Forbidden => controller.StatusCode(
                 StatusCodes.Status403Forbidden,
-                new { message = result.Message }
-            ),
+                new { message = result.Message }),
 
-            _ => controller.BadRequest(
-                new { message = result.Message }
-            )
-        };
+            _ => controller.BadRequest(new { message = result.Message })};
     }
 }

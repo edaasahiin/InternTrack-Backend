@@ -1,3 +1,4 @@
+using InternTrack.Core.Constants;
 namespace InternTrack.Core.Models;
 
 public class TaskItem
@@ -10,7 +11,7 @@ public class TaskItem
 
     public required string Status { get; set; }
 
-    public string Priority { get; set; } = "Medium";
+    public string Priority { get; set; } = TaskPriorities.Medium;
 
     public DateTime? DueDate { get; set; }
 
@@ -25,4 +26,6 @@ public class TaskItem
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? CompletedAt { get; set; }
+
+    public bool IsActive { get; set; } = true;
 }

@@ -20,41 +20,31 @@ public class ServiceResult
 
     public static ServiceResult NotFound(string message)
     {
-        return new ServiceResult
-        {
-            Success = false,
-            Message = message,
-            Type = ResultType.NotFound
-        };
+        return CreateFailure(ResultType.NotFound, message);
     }
 
     public static ServiceResult ValidationError(string message)
     {
-        return new ServiceResult
-        {
-            Success = false,
-            Message = message,
-            Type = ResultType.ValidationError
-        };
+        return CreateFailure(ResultType.ValidationError, message);
     }
 
     public static ServiceResult Conflict(string message)
     {
-        return new ServiceResult
-        {
-            Success = false,
-            Message = message,
-            Type = ResultType.Conflict
-        };
+        return CreateFailure(ResultType.Conflict, message);
     }
 
     public static ServiceResult Forbidden(string message)
+    {
+        return CreateFailure(ResultType.Forbidden, message);
+    }
+
+    private static ServiceResult CreateFailure(ResultType type, string message)
     {
         return new ServiceResult
         {
             Success = false,
             Message = message,
-            Type = ResultType.Forbidden
+            Type = type
         };
     }
 }

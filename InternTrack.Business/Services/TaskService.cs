@@ -23,6 +23,40 @@ public class TaskService : ITaskService
         _logger = logger;
     }
 
+    private static bool AreSameMinuteUtc(
+        DateTime? first,
+        DateTime? second)
+    {
+        if (
+            !first.HasValue &&
+            !second.HasValue
+        )
+        {
+            return true;
+        }
+
+        if (
+            !first.HasValue ||
+            !second.HasValue
+        )
+        {
+            return false;
+        }
+
+        var firstUtc =
+            first.Value.ToUniversalTime();
+
+        var secondUtc =
+            second.Value.ToUniversalTime();
+
+        return
+            firstUtc.Year == secondUtc.Year &&
+            firstUtc.Month == secondUtc.Month &&
+            firstUtc.Day == secondUtc.Day &&
+            firstUtc.Hour == secondUtc.Hour &&
+            firstUtc.Minute == secondUtc.Minute;
+    }
+
     public async Task<ServiceResult<List<TaskItem>>> GetAllAsync(
         int userId,
         string role)
@@ -58,6 +92,17 @@ public class TaskService : ITaskService
             await _taskRepository.GetByInternIdAsync(
                 intern.Id
             );
+
+        return ServiceResult<List<TaskItem>>
+            .Ok(tasks);
+    }
+
+    public async Task<ServiceResult<List<TaskItem>>>
+        GetAllIncludingInactiveAsync()
+    {
+        var tasks =
+            await _taskRepository
+                .GetAllIncludingInactiveAsync();
 
         return ServiceResult<List<TaskItem>>
             .Ok(tasks);
@@ -272,9 +317,14 @@ public class TaskService : ITaskService
         string role)
     {
         var task =
-            await _taskRepository.GetByIdAsync(
-                id
-            );
+            role == "Admin"
+                ? await _taskRepository
+                    .GetByIdIncludingInactiveAsync(
+                        id
+                    )
+                : await _taskRepository.GetByIdAsync(
+                    id
+                );
 
         if (task == null)
         {
@@ -323,8 +373,70 @@ public class TaskService : ITaskService
                 );
             }
 
+            var currentTaskDueDateUtc =
+                task.DueDate?.ToUniversalTime();
+
+            if (
+                currentTaskDueDateUtc.HasValue &&
+                currentTaskDueDateUtc.Value <
+                DateTime.UtcNow
+            )
+            {
+                _logger?.LogWarning(
+                    "Intern task update rejected because task is overdue. TaskId: {TaskId}, UserId: {UserId}, DueDate: {DueDate}",
+                    id,
+                    userId,
+                    currentTaskDueDateUtc
+                );
+
+                return ServiceResult.ValidationError(
+                    "Son teslim tarihi geçmiş görevler stajyer tarafından düzenlenemez."
+                );
+            }
+
             var newStatus =
                 dto.Status.Trim();
+
+            var createdByCurrentIntern =
+                task.CreatedByUserId ==
+                userId;
+
+            var requestedDueDateUtc =
+                dto.DueDate?.ToUniversalTime();
+
+            var effectiveDueDateUtc =
+                createdByCurrentIntern
+                    ? requestedDueDateUtc
+                    : task.DueDate?.ToUniversalTime();
+
+            var statusChanged =
+                task.Status !=
+                newStatus;
+
+            var movingToActiveOrDone =
+                newStatus == "InProgress" ||
+                newStatus == "Done";
+
+            if (
+                statusChanged &&
+                movingToActiveOrDone &&
+                effectiveDueDateUtc.HasValue &&
+                effectiveDueDateUtc.Value <
+                DateTime.UtcNow
+            )
+            {
+                _logger?.LogWarning(
+                    "Task status update rejected because task is overdue. TaskId: {TaskId}, UserId: {UserId}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
+                    id,
+                    userId,
+                    task.Status,
+                    newStatus
+                );
+
+                return ServiceResult.ValidationError(
+                    "Son teslim tarihi geçmiş görev başlatılamaz veya tamamlanamaz. Önce son teslim tarihini güncelleyin."
+                );
+            }
 
             if (
                 task.Status == "ToDo" &&
@@ -393,21 +505,19 @@ public class TaskService : ITaskService
             task.Status =
                 newStatus;
 
-            var createdByCurrentIntern =
-                task.CreatedByUserId ==
-                userId;
-
             if (createdByCurrentIntern)
             {
                 var newDueDateUtc =
-                    dto.DueDate?.ToUniversalTime();
+                    requestedDueDateUtc;
 
                 var currentDueDateUtc =
                     task.DueDate?.ToUniversalTime();
 
                 var dueDateChanged =
-                    currentDueDateUtc !=
-                    newDueDateUtc;
+                    !AreSameMinuteUtc(
+                        currentDueDateUtc,
+                        newDueDateUtc
+                    );
 
                 if (
                     dueDateChanged &&
@@ -467,23 +577,40 @@ public class TaskService : ITaskService
             );
         }
 
-        var selectedIntern =
-            await _internRepository.GetByIdAsync(
-                dto.InternId
-            );
+        var desiredIsActive =
+            role == "Admin" &&
+            dto.IsActive.HasValue
+                ? dto.IsActive.Value
+                : task.IsActive;
 
-        if (selectedIntern == null)
+        var internChanged =
+            task.InternId !=
+            dto.InternId;
+
+        var mustUseActiveIntern =
+            desiredIsActive ||
+            internChanged;
+
+        if (mustUseActiveIntern)
         {
-            _logger?.LogWarning(
-                "Task update rejected because selected intern was not found. TaskId: {TaskId}, InternId: {InternId}, UserId: {UserId}",
-                id,
-                dto.InternId,
-                userId
-            );
+            var selectedIntern =
+                await _internRepository.GetByIdAsync(
+                    dto.InternId
+                );
 
-            return ServiceResult.ValidationError(
-                "Stajyer bulunamadı."
-            );
+            if (selectedIntern == null)
+            {
+                _logger?.LogWarning(
+                    "Task update rejected because selected intern was not found or inactive. TaskId: {TaskId}, InternId: {InternId}, UserId: {UserId}",
+                    id,
+                    dto.InternId,
+                    userId
+                );
+
+                return ServiceResult.ValidationError(
+                    "Seçilen stajyer pasif veya bulunamadı."
+                );
+            }
         }
 
         var newAdminDueDateUtc =
@@ -493,10 +620,13 @@ public class TaskService : ITaskService
             task.DueDate?.ToUniversalTime();
 
         var adminDueDateChanged =
-            currentAdminDueDateUtc !=
-            newAdminDueDateUtc;
+            !AreSameMinuteUtc(
+                currentAdminDueDateUtc,
+                newAdminDueDateUtc
+            );
 
         if (
+            role == "HR" &&
             adminDueDateChanged &&
             newAdminDueDateUtc.HasValue &&
             newAdminDueDateUtc.Value <
@@ -517,6 +647,37 @@ public class TaskService : ITaskService
 
         var newAdminStatus =
             dto.Status.Trim();
+
+        var adminStatusChanged =
+            task.Status !=
+            newAdminStatus;
+
+        var adminMovingToActiveOrDone =
+            newAdminStatus == "InProgress" ||
+            newAdminStatus == "Done";
+
+        if (
+            role == "HR" &&
+            adminStatusChanged &&
+            adminMovingToActiveOrDone &&
+            newAdminDueDateUtc.HasValue &&
+            newAdminDueDateUtc.Value <
+            DateTime.UtcNow
+        )
+        {
+            _logger?.LogWarning(
+                "Task status update rejected because task is overdue. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
+                id,
+                userId,
+                role,
+                task.Status,
+                newAdminStatus
+            );
+
+            return ServiceResult.ValidationError(
+                "Son teslim tarihi geçmiş görev başlatılamaz veya tamamlanamaz. Önce son teslim tarihini güncelleyin."
+            );
+        }
 
         if (
             task.Status != "Done" &&
@@ -553,6 +714,15 @@ public class TaskService : ITaskService
 
         task.CanInternDeleteWhenCompleted =
             dto.CanInternDeleteWhenCompleted;
+
+        if (
+            role == "Admin" &&
+            dto.IsActive.HasValue
+        )
+        {
+            task.IsActive =
+                dto.IsActive.Value;
+        }
 
         await _taskRepository.UpdateAsync(
             task
@@ -640,7 +810,7 @@ public class TaskService : ITaskService
                 );
 
                 _logger?.LogInformation(
-                    "Task deleted by its creator intern. TaskId: {TaskId}, UserId: {UserId}",
+                    "Task soft deleted by its creator intern. TaskId: {TaskId}, UserId: {UserId}",
                     id,
                     userId
                 );
@@ -671,10 +841,7 @@ public class TaskService : ITaskService
                 );
             }
         }
-        else if (
-            role != "Admin" &&
-            role != "HR"
-        )
+        else if (role != "Admin")
         {
             _logger?.LogWarning(
                 "Unauthorized task deletion attempt. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
@@ -693,7 +860,7 @@ public class TaskService : ITaskService
         );
 
         _logger?.LogInformation(
-            "Task deleted successfully. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
+            "Task soft deleted successfully. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
             id,
             userId,
             role
@@ -701,6 +868,73 @@ public class TaskService : ITaskService
 
         return ServiceResult.Ok(
             "Görev silindi."
+        );
+    }
+
+    public async Task<ServiceResult> RestoreAsync(
+        int id)
+    {
+        var task =
+            await _taskRepository
+                .GetByIdIncludingInactiveAsync(
+                    id
+                );
+
+        if (task == null)
+        {
+            _logger?.LogWarning(
+                "Task restore failed because task was not found. TaskId: {TaskId}",
+                id
+            );
+
+            return ServiceResult.NotFound(
+                "Görev bulunamadı."
+            );
+        }
+
+        if (task.IsActive)
+        {
+            _logger?.LogWarning(
+                "Task restore rejected because task is already active. TaskId: {TaskId}",
+                id
+            );
+
+            return ServiceResult.Conflict(
+                "Görev zaten aktif."
+            );
+        }
+
+        var intern =
+            await _internRepository
+                .GetByIdAsync(
+                    task.InternId
+                );
+
+        if (intern == null)
+        {
+            _logger?.LogWarning(
+                "Task restore rejected because linked intern is inactive or unavailable. TaskId: {TaskId}, InternId: {InternId}",
+                task.Id,
+                task.InternId
+            );
+
+            return ServiceResult.Conflict(
+                "Görevin atandığı stajyer pasif veya bulunamadı. Önce stajyeri aktif hale getirin."
+            );
+        }
+
+        await _taskRepository.RestoreAsync(
+            task
+        );
+
+        _logger?.LogInformation(
+            "Task restored successfully. TaskId: {TaskId}, InternId: {InternId}",
+            task.Id,
+            task.InternId
+        );
+
+        return ServiceResult.Ok(
+            "Görev tekrar aktif hale getirildi."
         );
     }
 }

@@ -11,18 +11,11 @@ public class TokenCookieMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var accessToken =
-            context.Request.Cookies["accessToken"];
+        var accessToken = context.Request.Cookies["accessToken"];
 
-        if (
-            !string.IsNullOrWhiteSpace(accessToken) &&
-            !context.Request.Headers.ContainsKey(
-                "Authorization"
-            )
-        )
+        if (!string.IsNullOrWhiteSpace(accessToken) && !context.Request.Headers.ContainsKey("Authorization"))
         {
-            context.Request.Headers.Authorization =
-                $"Bearer {accessToken}";
+            context.Request.Headers.Authorization = $"Bearer {accessToken}";
         }
 
         await _next(context);

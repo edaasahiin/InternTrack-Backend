@@ -6,7 +6,11 @@ public interface IInternRepository
 {
     Task<List<Intern>> GetAllAsync();
 
+    Task<List<Intern>> GetAllIncludingInactiveAsync();
+
     Task<Intern?> GetByIdAsync(int id);
+
+    Task<Intern?> GetByIdIncludingInactiveAsync(int id);
 
     Task<Intern?> GetByUserIdAsync(int userId);
 
@@ -19,4 +23,6 @@ public interface IInternRepository
     Task UpdateAsync(Intern intern);
 
     Task DeleteAsync(Intern intern);
+
+    Task RestoreAsync(Intern intern);
 }

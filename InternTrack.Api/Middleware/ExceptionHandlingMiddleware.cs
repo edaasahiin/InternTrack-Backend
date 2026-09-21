@@ -8,16 +8,13 @@ public class ExceptionHandlingMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
-    public ExceptionHandlingMiddleware(
-        RequestDelegate next,
-        ILogger<ExceptionHandlingMiddleware> logger)
+    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
     {
         _next = next;
         _logger = logger;
     }
 
-    public async Task InvokeAsync(
-        HttpContext context)
+    public async Task InvokeAsync(HttpContext context)
     {
         try
         {
@@ -30,57 +27,40 @@ public class ExceptionHandlingMiddleware
                 throw;
             }
 
-            await HandleExceptionAsync(
-                context,
-                exception
-            );
+            await HandleExceptionAsync(context, exception);
         }
     }
 
-    private async Task HandleExceptionAsync(
-        HttpContext context,
-        Exception exception)
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        var traceId =
-            context.TraceIdentifier;
+        var traceId = context.TraceIdentifier;
 
         _logger.LogError(
             exception,
             "Beklenmeyen hata oluştu. Method: {Method}, Path: {Path}, TraceId: {TraceId}",
             context.Request.Method,
             context.Request.Path,
-            traceId
-        );
+            traceId);
 
         context.Response.Clear();
 
-        context.Response.StatusCode =
-            (int)HttpStatusCode.InternalServerError;
+        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-        context.Response.ContentType =
-            "application/json";
+        context.Response.ContentType = "application/json";
 
-        var response =
-            new
-            {
-                success = false,
+        var response = new
+        {
+            success = false,
 
-                message =
-                    "Beklenmeyen bir hata oluştu.",
+            message = "Beklenmeyen bir hata oluştu.",
 
-                statusCode =
-                    (int)HttpStatusCode.InternalServerError,
+            statusCode = (int)HttpStatusCode.InternalServerError,
 
-                traceId
-            };
+            traceId
+        };
 
-        var json =
-            JsonSerializer.Serialize(
-                response
-            );
+        var json = JsonSerializer.Serialize(response);
 
-        await context.Response.WriteAsync(
-            json
-        );
+        await context.Response.WriteAsync(json);
     }
 }

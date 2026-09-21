@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace InternTrack.Core.Models;
@@ -18,7 +19,13 @@ public class Intern
 
     public int UserId { get; set; }
 
+    [JsonIgnore]
     public User? User { get; set; }
+
+    [NotMapped]
+    public string? Avatar { get; set; }
+
+    public bool IsActive { get; set; } = true;
 
     [JsonIgnore]
     public List<TaskItem> Tasks { get; set; } = new();

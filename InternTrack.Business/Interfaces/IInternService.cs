@@ -1,32 +1,21 @@
 using InternTrack.Business.Common;
 using InternTrack.Core.DTOs;
-using InternTrack.Core.Models;
 
 namespace InternTrack.Business.Interfaces;
 
 public interface IInternService
 {
-    Task<ServiceResult<List<Intern>>> GetAllAsync(
-        int userId,
-        string role
-    );
+    Task<ServiceResult<List<InternResponseDto>>> GetAllAsync(int userId, string role);
 
-    Task<ServiceResult<Intern>> GetByIdAsync(
-        int id,
-        int userId,
-        string role
-    );
+    Task<ServiceResult<List<InternResponseDto>>> GetAllIncludingInactiveAsync();
 
-    Task<ServiceResult> AddAsync(
-        CreateInternDto dto
-    );
+    Task<ServiceResult<InternResponseDto>> GetByIdAsync(int id, int userId, string role);
 
-    Task<ServiceResult> UpdateAsync(
-        int id,
-        UpdateInternDto dto
-    );
+    Task<ServiceResult> AddAsync(CreateInternDto dto);
 
-    Task<ServiceResult> DeleteAsync(
-        int id
-    );
+    Task<ServiceResult> UpdateAsync(int id, UpdateInternDto dto);
+
+    Task<ServiceResult> DeleteAsync(int id);
+
+    Task<ServiceResult> RestoreAsync(int id);
 }

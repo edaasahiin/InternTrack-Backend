@@ -6,22 +6,19 @@ public interface IDepartmentRepository
 {
     Task<List<Department>> GetAllAsync();
 
+    Task<List<Department>> GetAllIncludingInactiveAsync();
+
     Task<Department?> GetByIdAsync(int id);
 
-    Task<bool> NameExistsAsync(
-        string name,
-        int? excludeId = null
-    );
+    Task<Department?> GetByIdIncludingInactiveAsync(int id);
 
-    Task AddAsync(
-        Department department
-    );
+    Task<bool> NameExistsAsync(string name, int? excludeId = null);
 
-    Task UpdateAsync(
-        Department department
-    );
+    Task AddAsync(Department department);
 
-    Task DeleteAsync(
-        Department department
-    );
+    Task UpdateAsync(Department department);
+
+    Task DeleteAsync(Department department);
+
+    Task RestoreAsync(Department department);
 }

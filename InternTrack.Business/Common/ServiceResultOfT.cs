@@ -10,9 +10,7 @@ public class ServiceResult<T>
 
     public T? Data { get; set; }
 
-    public static ServiceResult<T> Ok(
-        T data,
-        string message = "")
+    public static ServiceResult<T> Ok(T data, string message = "")
     {
         return new ServiceResult<T>
         {
@@ -25,44 +23,31 @@ public class ServiceResult<T>
 
     public static ServiceResult<T> NotFound(string message)
     {
-        return new ServiceResult<T>
-        {
-            Success = false,
-            Message = message,
-            Type = ResultType.NotFound,
-            Data = default
-        };
+        return CreateFailure(ResultType.NotFound, message);
     }
 
     public static ServiceResult<T> ValidationError(string message)
     {
-        return new ServiceResult<T>
-        {
-            Success = false,
-            Message = message,
-            Type = ResultType.ValidationError,
-            Data = default
-        };
+        return CreateFailure(ResultType.ValidationError, message);
     }
 
     public static ServiceResult<T> Conflict(string message)
     {
-        return new ServiceResult<T>
-        {
-            Success = false,
-            Message = message,
-            Type = ResultType.Conflict,
-            Data = default
-        };
+        return CreateFailure(ResultType.Conflict, message);
     }
 
     public static ServiceResult<T> Forbidden(string message)
+    {
+        return CreateFailure(ResultType.Forbidden, message);
+    }
+
+    private static ServiceResult<T> CreateFailure(ResultType type, string message)
     {
         return new ServiceResult<T>
         {
             Success = false,
             Message = message,
-            Type = ResultType.Forbidden,
+            Type = type,
             Data = default
         };
     }

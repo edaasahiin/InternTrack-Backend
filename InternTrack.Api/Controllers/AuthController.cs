@@ -4,6 +4,7 @@ using InternTrack.Core.DTOs;
 using InternTrack.DataAccess.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace InternTrack.Api.Controllers;
 
@@ -15,18 +16,31 @@ public class AuthController : ControllerBase
     private readonly IAuthService _authService;
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _configuration;
+    private readonly IWebHostEnvironment _environment;
 
     public AuthController(
         IAuthService authService,
         IUserRepository userRepository,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IWebHostEnvironment environment)
     {
-        _authService = authService;
-        _userRepository = userRepository;
-        _configuration = configuration;
+        _authService =
+            authService;
+
+        _userRepository =
+            userRepository;
+
+        _configuration =
+            configuration;
+
+        _environment =
+            environment;
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        "RegisterPolicy"
+    )]
     [HttpPost("register")]
     [ProducesResponseType(
         StatusCodes.Status201Created
@@ -37,13 +51,17 @@ public class AuthController : ControllerBase
     [ProducesResponseType(
         StatusCodes.Status409Conflict
     )]
+    [ProducesResponseType(
+        StatusCodes.Status429TooManyRequests
+    )]
     public async Task<IActionResult> Register(
         [FromBody] RegisterDto dto)
     {
         var result =
-            await _authService.RegisterAsync(
-                dto
-            );
+            await _authService
+                .RegisterAsync(
+                    dto
+                );
 
         return ServiceResultMapper
             .ToActionResult(
@@ -54,6 +72,9 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        "LoginPolicy"
+    )]
     [HttpPost("login")]
     [ProducesResponseType(
         StatusCodes.Status200OK
@@ -64,13 +85,17 @@ public class AuthController : ControllerBase
     [ProducesResponseType(
         StatusCodes.Status401Unauthorized
     )]
+    [ProducesResponseType(
+        StatusCodes.Status429TooManyRequests
+    )]
     public async Task<IActionResult> Login(
         [FromBody] LoginDto dto)
     {
         var result =
-            await _authService.LoginAsync(
-                dto
-            );
+            await _authService
+                .LoginAsync(
+                    dto
+                );
 
         if (
             !result.Success ||
@@ -90,13 +115,24 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            name = result.Data.Name,
-            surname = result.Data.Surname,
-            avatar = result.Data.Avatar,
-            email = result.Data.Email,
-            role = result.Data.Role,
+            name =
+                result.Data.Name,
+
+            surname =
+                result.Data.Surname,
+
+            avatar =
+                result.Data.Avatar,
+
+            email =
+                result.Data.Email,
+
+            role =
+                result.Data.Role,
+
             mustChangePassword =
-                result.Data.MustChangePassword
+                result.Data
+                    .MustChangePassword
         });
     }
 
@@ -110,9 +146,13 @@ public class AuthController : ControllerBase
     )]
     public async Task<IActionResult> Me()
     {
-        if (!CurrentUserHelper.TryGetUserId(
-            User,
-            out var userId))
+        if (
+            !CurrentUserHelper
+                .TryGetUserId(
+                    User,
+                    out var userId
+                )
+        )
         {
             return Unauthorized(new
             {
@@ -136,13 +176,43 @@ public class AuthController : ControllerBase
             });
         }
 
+        if (
+            user.Role.Equals(
+                "Intern",
+                StringComparison.OrdinalIgnoreCase
+            ) &&
+            (
+                user.Intern == null ||
+                !user.Intern.IsActive
+            )
+        )
+        {
+            DeleteTokenCookies();
+
+            return Unauthorized(new
+            {
+                message =
+                    "Hesabınız pasif durumda."
+            });
+        }
+
         return Ok(new
         {
-            name = user.Name,
-            surname = user.Surname,
-            avatar = user.Avatar,
-            email = user.Email,
-            role = user.Role,
+            name =
+                user.Name,
+
+            surname =
+                user.Surname,
+
+            avatar =
+                user.Avatar,
+
+            email =
+                user.Email,
+
+            role =
+                user.Role,
+
             mustChangePassword =
                 user.MustChangePassword
         });
@@ -165,9 +235,13 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> UpdateAvatar(
         [FromBody] UpdateAvatarDto dto)
     {
-        if (!CurrentUserHelper.TryGetUserId(
-            User,
-            out var userId))
+        if (
+            !CurrentUserHelper
+                .TryGetUserId(
+                    User,
+                    out var userId
+                )
+        )
         {
             return Unauthorized(new
             {
@@ -210,9 +284,13 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> UpdateProfile(
         [FromBody] UpdateProfileDto dto)
     {
-        if (!CurrentUserHelper.TryGetUserId(
-            User,
-            out var userId))
+        if (
+            !CurrentUserHelper
+                .TryGetUserId(
+                    User,
+                    out var userId
+                )
+        )
         {
             return Unauthorized(new
             {
@@ -252,9 +330,13 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> ChangePassword(
         [FromBody] ChangePasswordDto dto)
     {
-        if (!CurrentUserHelper.TryGetUserId(
-            User,
-            out var userId))
+        if (
+            !CurrentUserHelper
+                .TryGetUserId(
+                    User,
+                    out var userId
+                )
+        )
         {
             return Unauthorized(new
             {
@@ -278,12 +360,18 @@ public class AuthController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(
+        "RefreshPolicy"
+    )]
     [HttpPost("refresh")]
     [ProducesResponseType(
         StatusCodes.Status200OK
     )]
     [ProducesResponseType(
         StatusCodes.Status401Unauthorized
+    )]
+    [ProducesResponseType(
+        StatusCodes.Status429TooManyRequests
     )]
     public async Task<IActionResult> Refresh()
     {
@@ -292,8 +380,11 @@ public class AuthController : ControllerBase
                 "refreshToken"
             ];
 
-        if (string.IsNullOrWhiteSpace(
-            refreshToken))
+        if (
+            string.IsNullOrWhiteSpace(
+                refreshToken
+            )
+        )
         {
             return Unauthorized(new
             {
@@ -313,6 +404,8 @@ public class AuthController : ControllerBase
             result.Data == null
         )
         {
+            DeleteTokenCookies();
+
             return ServiceResultMapper
                 .ToActionResult(
                     this,
@@ -326,13 +419,24 @@ public class AuthController : ControllerBase
 
         return Ok(new
         {
-            name = result.Data.Name,
-            surname = result.Data.Surname,
-            avatar = result.Data.Avatar,
-            email = result.Data.Email,
-            role = result.Data.Role,
+            name =
+                result.Data.Name,
+
+            surname =
+                result.Data.Surname,
+
+            avatar =
+                result.Data.Avatar,
+
+            email =
+                result.Data.Email,
+
+            role =
+                result.Data.Role,
+
             mustChangePassword =
-                result.Data.MustChangePassword
+                result.Data
+                    .MustChangePassword
         });
     }
 
@@ -348,8 +452,11 @@ public class AuthController : ControllerBase
                 "refreshToken"
             ];
 
-        if (!string.IsNullOrWhiteSpace(
-            refreshToken))
+        if (
+            !string.IsNullOrWhiteSpace(
+                refreshToken
+            )
+        )
         {
             await _authService
                 .LogoutAsync(
@@ -369,25 +476,41 @@ public class AuthController : ControllerBase
     private void WriteTokenCookies(
         LoginResponseDto response)
     {
+        DeleteLegacyTokenCookies();
+
         var accessTokenMinutes =
-            _configuration.GetValue<int>(
-                "Jwt:AccessTokenMinutes"
-            );
+            _configuration
+                .GetValue<int>(
+                    "Jwt:AccessTokenMinutes"
+                );
 
         var refreshTokenDays =
-            _configuration.GetValue<int>(
-                "Jwt:RefreshTokenDays"
-            );
+            _configuration
+                .GetValue<int>(
+                    "Jwt:RefreshTokenDays"
+                );
+
+        var secureCookie =
+            !_environment
+                .IsDevelopment();
 
         Response.Cookies.Append(
             "accessToken",
             response.AccessToken,
             new CookieOptions
             {
-                HttpOnly = true,
-                Secure = false,
+                HttpOnly =
+                    true,
+
+                Secure =
+                    secureCookie,
+
                 SameSite =
                     SameSiteMode.Lax,
+
+                Path =
+                    "/api",
+
                 Expires =
                     DateTimeOffset.UtcNow
                         .AddMinutes(
@@ -401,10 +524,18 @@ public class AuthController : ControllerBase
             response.RefreshToken,
             new CookieOptions
             {
-                HttpOnly = true,
-                Secure = false,
+                HttpOnly =
+                    true,
+
+                Secure =
+                    secureCookie,
+
                 SameSite =
                     SameSiteMode.Lax,
+
+                Path =
+                    "/api/auth",
+
                 Expires =
                     DateTimeOffset.UtcNow
                         .AddDays(
@@ -416,23 +547,125 @@ public class AuthController : ControllerBase
 
     private void DeleteTokenCookies()
     {
-        var cookieOptions =
+        var secureCookie =
+            !_environment
+                .IsDevelopment();
+
+        var expiredAt =
+            DateTimeOffset.UtcNow
+                .AddDays(-1);
+
+        Response.Cookies.Append(
+            "accessToken",
+            string.Empty,
             new CookieOptions
             {
-                HttpOnly = true,
-                Secure = false,
-                SameSite =
-                    SameSiteMode.Lax
-            };
+                HttpOnly =
+                    true,
 
-        Response.Cookies.Delete(
-            "accessToken",
-            cookieOptions
+                Secure =
+                    secureCookie,
+
+                SameSite =
+                    SameSiteMode.Lax,
+
+                Path =
+                    "/api",
+
+                Expires =
+                    expiredAt,
+
+                MaxAge =
+                    TimeSpan.Zero
+            }
         );
 
-        Response.Cookies.Delete(
+        Response.Cookies.Append(
             "refreshToken",
-            cookieOptions
+            string.Empty,
+            new CookieOptions
+            {
+                HttpOnly =
+                    true,
+
+                Secure =
+                    secureCookie,
+
+                SameSite =
+                    SameSiteMode.Lax,
+
+                Path =
+                    "/api/auth",
+
+                Expires =
+                    expiredAt,
+
+                MaxAge =
+                    TimeSpan.Zero
+            }
+        );
+
+        DeleteLegacyTokenCookies();
+    }
+
+    private void DeleteLegacyTokenCookies()
+    {
+        var secureCookie =
+            !_environment
+                .IsDevelopment();
+
+        var expiredAt =
+            DateTimeOffset.UtcNow
+                .AddDays(-1);
+
+        Response.Cookies.Append(
+            "accessToken",
+            string.Empty,
+            new CookieOptions
+            {
+                HttpOnly =
+                    true,
+
+                Secure =
+                    secureCookie,
+
+                SameSite =
+                    SameSiteMode.Lax,
+
+                Path =
+                    "/",
+
+                Expires =
+                    expiredAt,
+
+                MaxAge =
+                    TimeSpan.Zero
+            }
+        );
+
+        Response.Cookies.Append(
+            "refreshToken",
+            string.Empty,
+            new CookieOptions
+            {
+                HttpOnly =
+                    true,
+
+                Secure =
+                    secureCookie,
+
+                SameSite =
+                    SameSiteMode.Lax,
+
+                Path =
+                    "/",
+
+                Expires =
+                    expiredAt,
+
+                MaxAge =
+                    TimeSpan.Zero
+            }
         );
     }
 }

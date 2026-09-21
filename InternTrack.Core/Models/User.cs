@@ -1,3 +1,4 @@
+using InternTrack.Core.Constants;
 using System.Text.Json.Serialization;
 
 namespace InternTrack.Core.Models;
@@ -16,7 +17,7 @@ public class User
 
     public required string PasswordHash { get; set; }
 
-    public string Role { get; set; } = "Intern";
+    public string Role { get; set; } = Roles.Intern;
 
     public bool MustChangePassword { get; set; } = false;
 

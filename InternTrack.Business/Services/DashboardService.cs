@@ -1,3 +1,4 @@
+using InternTrack.Core.Constants;
 using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
@@ -19,189 +20,101 @@ public class DashboardService : IDashboardService
         IDepartmentRepository departmentRepository,
         ILogger<DashboardService>? logger = null)
     {
-        _internRepository =
-            internRepository;
+        _internRepository = internRepository;
 
-        _taskRepository =
-            taskRepository;
+        _taskRepository = taskRepository;
 
-        _departmentRepository =
-            departmentRepository;
+        _departmentRepository = departmentRepository;
 
-        _logger =
-            logger;
+        _logger = logger;
     }
 
-    public async Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(
-        int userId,
-        string role)
+    public async Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(int userId, string role)
     {
-        if (
-            role == "Admin" ||
-            role == "HR"
-        )
+        if (role == Roles.Admin || role == Roles.HR)
         {
-            var interns =
-                await _internRepository.GetAllAsync();
+            var interns = await _internRepository.GetAllAsync();
 
-            var tasks =
-                await _taskRepository.GetAllAsync();
+            var tasks = await _taskRepository.GetAllAsync();
 
-            var departments =
-                await _departmentRepository.GetAllAsync();
+            var departments = await _departmentRepository.GetAllAsync();
 
-            var now =
-                DateTime.UtcNow;
+            var now = DateTime.UtcNow;
 
-            var toDoTaskCount =
-                tasks.Count(
-                    task =>
-                        task.Status == "ToDo" &&
-                        (
-                            !task.DueDate.HasValue ||
-                            task.DueDate.Value >= now
-                        )
-                );
+            var toDoTaskCount = tasks.Count(
+                task => task.Status == TaskStatuses.ToDo && (!task.DueDate.HasValue || task.DueDate.Value >= now));
 
-            var inProgressTaskCount =
-                tasks.Count(
-                    task =>
-                        task.Status == "InProgress" &&
-                        (
-                            !task.DueDate.HasValue ||
-                            task.DueDate.Value >= now
-                        )
-                );
+            var inProgressTaskCount = tasks.Count(
+                task => task.Status == TaskStatuses.InProgress && (!task.DueDate.HasValue || task.DueDate.Value >= now));
 
-            var completedTaskCount =
-                tasks.Count(
-                    task =>
-                        task.Status == "Done"
-                );
+            var completedTaskCount = tasks.Count(task => task.Status == TaskStatuses.Done);
 
-            var overdueTaskCount =
-                tasks.Count(
-                    task =>
-                        task.Status != "Done" &&
-                        task.DueDate.HasValue &&
-                        task.DueDate.Value < now
-                );
+            var overdueTaskCount = tasks.Count(
+                task => task.Status != TaskStatuses.Done && task.DueDate.HasValue && task.DueDate.Value < now);
 
-            var stats =
-                new DashboardStatsDto
-                {
-                    InternCount =
-                        interns.Count,
+            var stats = new DashboardStatsDto
+            {
+                InternCount = interns.Count,
 
-                    TaskCount =
-                        tasks.Count,
+                TaskCount = tasks.Count,
 
-                    ToDoTaskCount =
-                        toDoTaskCount,
+                ToDoTaskCount = toDoTaskCount,
 
-                    InProgressTaskCount =
-                        inProgressTaskCount,
+                InProgressTaskCount = inProgressTaskCount,
 
-                    CompletedTaskCount =
-                        completedTaskCount,
+                CompletedTaskCount = completedTaskCount,
 
-                    OverdueTaskCount =
-                        overdueTaskCount,
+                OverdueTaskCount = overdueTaskCount,
 
-                    DepartmentCount =
-                        departments.Count
-                };
+                DepartmentCount = departments.Count
+            };
 
-            return ServiceResult<DashboardStatsDto>
-                .Ok(stats);
+            return ServiceResult<DashboardStatsDto>.Ok(stats);
         }
 
-        var intern =
-            await _internRepository.GetByUserIdAsync(
-                userId
-            );
+        var intern = await _internRepository.GetByUserIdAsync(userId);
 
         if (intern == null)
         {
             _logger?.LogWarning(
                 "Dashboard statistics could not be retrieved because intern profile was not found. UserId: {UserId}",
-                userId
-            );
+                userId);
 
-            return ServiceResult<DashboardStatsDto>
-                .NotFound(
-                    "Stajyer kaydı bulunamadı."
-                );
+            return ServiceResult<DashboardStatsDto>.NotFound("Stajyer kaydı bulunamadı.");
         }
 
-        var internTasks =
-            await _taskRepository.GetByInternIdAsync(
-                intern.Id
-            );
+        var internTasks = await _taskRepository.GetByInternIdAsync(intern.Id);
 
-        var currentTime =
-            DateTime.UtcNow;
+        var currentTime = DateTime.UtcNow;
 
-        var internToDoTaskCount =
-            internTasks.Count(
-                task =>
-                    task.Status == "ToDo" &&
-                    (
-                        !task.DueDate.HasValue ||
-                        task.DueDate.Value >= currentTime
-                    )
-            );
+        var internToDoTaskCount = internTasks.Count(
+            task => task.Status == TaskStatuses.ToDo && (!task.DueDate.HasValue || task.DueDate.Value >= currentTime));
 
-        var internInProgressTaskCount =
-            internTasks.Count(
-                task =>
-                    task.Status == "InProgress" &&
-                    (
-                        !task.DueDate.HasValue ||
-                        task.DueDate.Value >= currentTime
-                    )
-            );
+        var internInProgressTaskCount = internTasks.Count(
+            task => task.Status == TaskStatuses.InProgress && (!task.DueDate.HasValue || task.DueDate.Value >= currentTime));
 
-        var internCompletedTaskCount =
-            internTasks.Count(
-                task =>
-                    task.Status == "Done"
-            );
+        var internCompletedTaskCount = internTasks.Count(task => task.Status == TaskStatuses.Done);
 
-        var internOverdueTaskCount =
-            internTasks.Count(
-                task =>
-                    task.Status != "Done" &&
-                    task.DueDate.HasValue &&
-                    task.DueDate.Value < currentTime
-            );
+        var internOverdueTaskCount = internTasks.Count(
+            task => task.Status != TaskStatuses.Done && task.DueDate.HasValue && task.DueDate.Value < currentTime);
 
-        var internStats =
-            new DashboardStatsDto
-            {
-                InternCount =
-                    1,
+        var internStats = new DashboardStatsDto
+        {
+            InternCount = 1,
 
-                TaskCount =
-                    internTasks.Count,
+            TaskCount = internTasks.Count,
 
-                ToDoTaskCount =
-                    internToDoTaskCount,
+            ToDoTaskCount = internToDoTaskCount,
 
-                InProgressTaskCount =
-                    internInProgressTaskCount,
+            InProgressTaskCount = internInProgressTaskCount,
 
-                CompletedTaskCount =
-                    internCompletedTaskCount,
+            CompletedTaskCount = internCompletedTaskCount,
 
-                OverdueTaskCount =
-                    internOverdueTaskCount,
+            OverdueTaskCount = internOverdueTaskCount,
 
-                DepartmentCount =
-                    0
-            };
+            DepartmentCount = 0
+        };
 
-        return ServiceResult<DashboardStatsDto>
-            .Ok(internStats);
+        return ServiceResult<DashboardStatsDto>.Ok(internStats);
     }
 }

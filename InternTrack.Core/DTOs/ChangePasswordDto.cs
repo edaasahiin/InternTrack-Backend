@@ -8,9 +8,6 @@ public class ChangePasswordDto
     public required string CurrentPassword { get; set; }
 
     [Required(ErrorMessage = "Yeni şifre alanı zorunludur.")]
-    [MinLength(
-        6,
-        ErrorMessage = "Yeni şifre en az 6 karakter olmalıdır."
-    )]
+    [MinLength(6, ErrorMessage = "Yeni şifre en az 6 karakter olmalıdır.")]
     public required string NewPassword { get; set; }
 }

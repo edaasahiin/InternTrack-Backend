@@ -7,30 +7,15 @@ public interface IAuthService
 {
     Task<ServiceResult> RegisterAsync(RegisterDto dto);
 
-    Task<ServiceResult<LoginResponseDto>> LoginAsync(
-        LoginDto dto
-    );
+    Task<ServiceResult<LoginResponseDto>> LoginAsync(LoginDto dto);
 
-    Task<ServiceResult<LoginResponseDto>> RefreshAsync(
-        string refreshToken
-    );
+    Task<ServiceResult<LoginResponseDto>> RefreshAsync(string refreshToken);
 
-    Task<ServiceResult> LogoutAsync(
-        string refreshToken
-    );
+    Task<ServiceResult> LogoutAsync(string refreshToken);
 
-    Task<ServiceResult> UpdateAvatarAsync(
-        int userId,
-        string? avatar
-    );
+    Task<ServiceResult> UpdateAvatarAsync(int userId, string? avatar);
 
-    Task<ServiceResult> ChangePasswordAsync(
-        int userId,
-        ChangePasswordDto dto
-    );
+    Task<ServiceResult> ChangePasswordAsync(int userId, ChangePasswordDto dto);
 
-    Task<ServiceResult> UpdateProfileAsync(
-        int userId,
-        UpdateProfileDto dto
-    );
+    Task<ServiceResult> UpdateProfileAsync(int userId, UpdateProfileDto dto);
 }

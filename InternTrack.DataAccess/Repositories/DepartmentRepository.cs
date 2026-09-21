@@ -5,82 +5,71 @@ using Microsoft.EntityFrameworkCore;
 
 namespace InternTrack.DataAccess.Repositories;
 
-public class DepartmentRepository :
-    IDepartmentRepository
+public class DepartmentRepository : IDepartmentRepository
 {
     private readonly AppDbContext _db;
 
-    public DepartmentRepository(
-        AppDbContext db)
+    public DepartmentRepository(AppDbContext db)
     {
         _db = db;
     }
 
     public async Task<List<Department>> GetAllAsync()
     {
-        return await _db.Departments
-            .ToListAsync();
+        return await _db.Departments.ToListAsync();
     }
 
-    public async Task<Department?> GetByIdAsync(
-        int id)
+    public async Task<List<Department>> GetAllIncludingInactiveAsync()
     {
-        return await _db.Departments
-            .FirstOrDefaultAsync(
-                x => x.Id == id
-            );
+        return await _db.Departments.IgnoreQueryFilters().ToListAsync();
     }
 
-    public async Task<bool> NameExistsAsync(
-        string name,
-        int? excludeId = null)
+    public async Task<Department?> GetByIdAsync(int id)
     {
-        var normalizedName =
-            name
-                .Trim()
-                .ToLower();
-
-        return await _db.Departments
-            .AnyAsync(
-                department =>
-                    department.Name
-                        .ToLower() ==
-                    normalizedName &&
-                    (
-                        !excludeId.HasValue ||
-                        department.Id !=
-                        excludeId.Value
-                    )
-            );
+        return await _db.Departments.FirstOrDefaultAsync(department => department.Id == id);
     }
 
-    public async Task AddAsync(
-        Department department)
+    public async Task<Department?> GetByIdIncludingInactiveAsync(int id)
     {
-        await _db.Departments
-            .AddAsync(
-                department
-            );
+        return await _db.Departments.IgnoreQueryFilters().FirstOrDefaultAsync(department => department.Id == id);
+    }
+
+    public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
+    {
+        var normalizedName = name.Trim().ToLower();
+
+        return await _db.Departments.IgnoreQueryFilters().AnyAsync(
+            department => department.Name.ToLower() == normalizedName && (!excludeId.HasValue || department.Id != excludeId.Value));
+    }
+
+    public async Task AddAsync(Department department)
+    {
+        await _db.Departments.AddAsync(department);
 
         await _db.SaveChangesAsync();
     }
 
-    public async Task UpdateAsync(
-        Department department)
+    public async Task UpdateAsync(Department department)
     {
-        _db.Departments.Update(
-            department
-        );
+        _db.Departments.Update(department);
 
         await _db.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(
-        Department department)
+    public async Task DeleteAsync(Department department)
     {
-        _db.Departments.Remove(
-            department
-        );
+        department.IsActive = false;
+
+        _db.Departments.Update(department);
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task RestoreAsync(Department department)
+    {
+        department.IsActive = true;
+
+        _db.Departments.Update(department);
 
         await _db.SaveChangesAsync();
     }
