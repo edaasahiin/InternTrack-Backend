@@ -1,0 +1,707 @@
+# InternTrack API Documentation
+
+This document summarizes the main API endpoints of the InternTrack backend.
+
+## Base URL
+
+    /api
+
+The API uses role-based authorization with three roles:
+
+- Admin
+- HR
+- Intern
+
+Authentication is handled using JWT access tokens and refresh tokens stored in HttpOnly cookies.
+
+---
+
+## Authentication Endpoints
+
+### Register
+
+**Endpoint:** `POST /api/auth/register`
+
+**Access:** Anonymous
+
+Creates a new Intern account.
+
+Rate limiting is enabled for this endpoint.
+
+Possible responses:
+
+- `201 Created`
+- `400 Bad Request`
+- `409 Conflict`
+- `429 Too Many Requests`
+
+---
+
+### Login
+
+**Endpoint:** `POST /api/auth/login`
+
+**Access:** Anonymous
+
+Authenticates a user.
+
+If authentication is successful, the backend writes the following tokens as HttpOnly cookies:
+
+- `accessToken`
+- `refreshToken`
+
+Rate limiting is enabled for this endpoint.
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `429 Too Many Requests`
+
+---
+
+### Get Current User
+
+**Endpoint:** `GET /api/auth/me`
+
+**Access:** Authenticated users
+
+Returns information about the currently authenticated user.
+
+Returned information includes:
+
+- Name
+- Surname
+- Avatar
+- Email
+- Role
+- MustChangePassword
+
+If an Intern account is inactive, authentication cookies are cleared and the request is rejected.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+
+---
+
+### Update Avatar
+
+**Endpoint:** `PUT /api/auth/avatar`
+
+**Access:** Authenticated users
+
+Updates the avatar of the currently authenticated user.
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `404 Not Found`
+
+---
+
+### Update Profile
+
+**Endpoint:** `PUT /api/auth/profile`
+
+**Access:** Authenticated users
+
+Updates the profile information of the currently authenticated user.
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+### Change Password
+
+**Endpoint:** `PUT /api/auth/change-password`
+
+**Access:** Authenticated users
+
+Changes the password of the currently authenticated user.
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `404 Not Found`
+
+---
+
+### Refresh Session
+
+**Endpoint:** `POST /api/auth/refresh`
+
+**Access:** Anonymous
+
+Uses the `refreshToken` cookie to renew the authenticated session.
+
+When the refresh operation succeeds:
+
+- The existing refresh token is validated.
+- The old refresh token is revoked.
+- A new access token is created.
+- A new refresh token is created.
+- New authentication cookies are written.
+
+Rate limiting is enabled for this endpoint.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `429 Too Many Requests`
+
+---
+
+### Logout
+
+**Endpoint:** `POST /api/auth/logout`
+
+**Access:** Anonymous
+
+Logs the user out of the application.
+
+If a refresh token is available, it is revoked. Authentication cookies are then cleared.
+
+Possible responses:
+
+- `200 OK`
+
+---
+
+## Dashboard Endpoint
+
+### Get Dashboard Statistics
+
+**Endpoint:** `GET /api/dashboard`
+
+**Access:** Authenticated users
+
+Returns dashboard statistics according to the authenticated user's ID and role.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `404 Not Found`
+
+---
+
+## Department Endpoints
+
+### Get Active Departments
+
+**Endpoint:** `GET /api/departments`
+
+**Access:** Anonymous
+
+Returns active departments.
+
+Possible responses:
+
+- `200 OK`
+
+---
+
+### Get All Departments
+
+**Endpoint:** `GET /api/departments/all`
+
+**Access:** Admin
+
+Returns both active and inactive departments.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+
+---
+
+### Get Department by ID
+
+**Endpoint:** `GET /api/departments/{id}`
+
+**Access:** Authenticated users
+
+Returns a department by ID.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `404 Not Found`
+
+---
+
+### Create Department
+
+**Endpoint:** `POST /api/departments`
+
+**Access:** Admin, HR
+
+Creates a new department.
+
+Possible responses:
+
+- `201 Created`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `409 Conflict`
+
+---
+
+### Update Department
+
+**Endpoint:** `PUT /api/departments/{id}`
+
+**Access:** Admin, HR
+
+Updates an existing department.
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+### Delete Department
+
+**Endpoint:** `DELETE /api/departments/{id}`
+
+**Access:** Admin
+
+Soft-deletes a department.
+
+Possible responses:
+
+- `204 No Content`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+### Restore Department
+
+**Endpoint:** `PATCH /api/departments/{id}/restore`
+
+**Access:** Admin
+
+Restores an inactive department.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+## Intern Endpoints
+
+### Get Interns
+
+**Endpoint:** `GET /api/interns`
+
+**Access:** Authenticated users
+
+Returns Intern records according to the authenticated user's role and authorization rules.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `404 Not Found`
+
+---
+
+### Get All Interns
+
+**Endpoint:** `GET /api/interns/all`
+
+**Access:** Admin
+
+Returns both active and inactive Intern records.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+
+---
+
+### Get Intern by ID
+
+**Endpoint:** `GET /api/interns/{id}`
+
+**Access:** Authenticated users
+
+Returns an Intern record according to role-based authorization rules.
+
+Intern users can only access records permitted by the business rules.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+
+---
+
+### Create Intern
+
+**Endpoint:** `POST /api/interns`
+
+**Access:** Admin, HR
+
+Creates a new Intern record.
+
+Possible responses:
+
+- `201 Created`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `409 Conflict`
+
+---
+
+### Update Intern
+
+**Endpoint:** `PUT /api/interns/{id}`
+
+**Access:** Admin, HR
+
+Updates an existing Intern record.
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+### Delete Intern
+
+**Endpoint:** `DELETE /api/interns/{id}`
+
+**Access:** Admin
+
+Soft-deletes an Intern record.
+
+Possible responses:
+
+- `204 No Content`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+
+---
+
+### Restore Intern
+
+**Endpoint:** `PATCH /api/interns/{id}/restore`
+
+**Access:** Admin
+
+Restores an inactive Intern.
+
+Restore operations are subject to related business rules.
+
+For example:
+
+- The related Department must be active before the Intern can be restored.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+## Task Endpoints
+
+### Get Tasks
+
+**Endpoint:** `GET /api/tasks`
+
+**Access:** Authenticated users
+
+Returns tasks according to the authenticated user's ID, role, and authorization rules.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `404 Not Found`
+
+---
+
+### Get All Tasks
+
+**Endpoint:** `GET /api/tasks/all`
+
+**Access:** Admin
+
+Returns both active and inactive tasks.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+
+---
+
+### Get Task by ID
+
+**Endpoint:** `GET /api/tasks/{id}`
+
+**Access:** Authenticated users
+
+Returns a task according to authorization rules.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+
+---
+
+### Create Task
+
+**Endpoint:** `POST /api/tasks`
+
+**Access:** Authenticated users
+
+Creates a task according to role-based business rules.
+
+The authenticated user's ID and role are used when validating the operation.
+
+Possible responses:
+
+- `201 Created`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+
+---
+
+### Update Task
+
+**Endpoint:** `PUT /api/tasks/{id}`
+
+**Access:** Authenticated users
+
+Updates a task according to business and authorization rules.
+
+Validation may include:
+
+- User role
+- Task ownership
+- Task status transition rules
+- Overdue task restrictions
+- Related entity validation
+
+Possible responses:
+
+- `200 OK`
+- `400 Bad Request`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+
+---
+
+### Delete Task
+
+**Endpoint:** `DELETE /api/tasks/{id}`
+
+**Access:** Authenticated users
+
+Deletes a task according to role-based authorization rules.
+
+Possible responses:
+
+- `204 No Content`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+
+---
+
+### Restore Task
+
+**Endpoint:** `PATCH /api/tasks/{id}/restore`
+
+**Access:** Admin
+
+Restores an inactive task.
+
+Restore operations are subject to related business rules.
+
+For example:
+
+- The assigned Intern must be active before the task can be restored.
+
+Possible responses:
+
+- `200 OK`
+- `401 Unauthorized`
+- `403 Forbidden`
+- `404 Not Found`
+- `409 Conflict`
+
+---
+
+## Authentication Cookies
+
+InternTrack uses two authentication cookies.
+
+### Access Token Cookie
+
+- Name: `accessToken`
+- Path: `/api`
+- HttpOnly: `true`
+- SameSite: `Lax`
+- Secure: `true` outside development
+
+The expiration time is configured using:
+
+    Jwt:AccessTokenMinutes
+
+### Refresh Token Cookie
+
+- Name: `refreshToken`
+- Path: `/api/auth`
+- HttpOnly: `true`
+- SameSite: `Lax`
+- Secure: `true` outside development
+
+The expiration time is configured using:
+
+    Jwt:RefreshTokenDays
+
+---
+
+## Rate Limiting
+
+Rate limiting is enabled for authentication-related endpoints.
+
+The configured policies include:
+
+- `RegisterPolicy`
+- `LoginPolicy`
+- `RefreshPolicy`
+
+When a configured request limit is exceeded, the API may return:
+
+    HTTP 429 Too Many Requests
+
+---
+
+## Authorization Summary
+
+| Operation | Anonymous | Intern | HR | Admin |
+| --- | --- | --- | --- | --- |
+| Register | Yes | Yes | Yes | Yes |
+| Login | Yes | Yes | Yes | Yes |
+| Refresh Session | Yes | Yes | Yes | Yes |
+| Logout | Yes | Yes | Yes | Yes |
+| Get Current User | No | Yes | Yes | Yes |
+| Get Active Departments | Yes | Yes | Yes | Yes |
+| Get All Departments | No | No | No | Yes |
+| Create Department | No | No | Yes | Yes |
+| Update Department | No | No | Yes | Yes |
+| Delete Department | No | No | No | Yes |
+| Restore Department | No | No | No | Yes |
+| View Interns | No | Restricted | Yes | Yes |
+| View All Interns | No | No | No | Yes |
+| Create Intern | No | No | Yes | Yes |
+| Update Intern | No | No | Yes | Yes |
+| Delete Intern | No | No | No | Yes |
+| Restore Intern | No | No | No | Yes |
+| View Tasks | No | Restricted | Yes | Yes |
+| View All Tasks | No | No | No | Yes |
+| Create Task | No | Restricted | Restricted | Yes |
+| Update Task | No | Restricted | Restricted | Yes |
+| Delete Task | No | Restricted | Restricted | Yes |
+| Restore Task | No | No | No | Yes |
+
+`Restricted` means that access depends on additional authorization and business rules implemented in the Business layer.
+
+---
+
+## API Security Notes
+
+Frontend authorization is not considered the main security boundary of the application.
+
+Critical authorization checks and business rules are also implemented in the backend Business layer.
+
+This prevents important application rules from being bypassed through direct API requests.
+
+The backend also includes:
+
+- JWT validation
+- Role-based authorization
+- HttpOnly authentication cookies
+- Refresh token rotation
+- Refresh token revocation
+- Refresh token hashing
+- Rate limiting
+- CORS configuration
+- HTTPS redirection outside development
+- Global exception handling
+
+---
+
+## Documentation Status
+
+The main InternTrack API endpoints are documented in this file.
+
+The documented areas include:
+
+- Authentication
+- Dashboard
+- Departments
+- Interns
+- Tasks
+- Role-based authorization
+- Authentication cookies
+- Rate limiting
+- Main API security behavior

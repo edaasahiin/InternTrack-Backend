@@ -428,4 +428,109 @@ public class DashboardServiceTests
             0,
             result.Data.OverdueTaskCount);
     }
+
+    [Fact]
+public async Task GetStatsAsync_TaskWithoutDueDate_ShouldNotCountAsOverdue()
+{
+    // ARRANGE
+    var internRepositoryMock = new Mock<IInternRepository>();
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var departmentRepositoryMock = new Mock<IDepartmentRepository>();
+
+    var task = new TaskItem
+    {
+        Id = 1,
+        Title = "Deadline Olmayan Görev",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        InternId = 1,
+        DueDate = null
+    };
+
+    internRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(new List<Intern>());
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(new List<TaskItem>
+        {
+            task
+        });
+
+    departmentRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(new List<Department>());
+
+    var service = new DashboardService(
+        internRepositoryMock.Object,
+        taskRepositoryMock.Object,
+        departmentRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetStatsAsync(
+        1,
+        Roles.Admin);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(1, result.Data.TaskCount);
+    Assert.Equal(1, result.Data.ToDoTaskCount);
+    Assert.Equal(0, result.Data.OverdueTaskCount);
+}
+
+[Fact]
+public async Task GetStatsAsync_OverdueInProgressTask_ShouldCountAsOverdue()
+{
+    // ARRANGE
+    var internRepositoryMock = new Mock<IInternRepository>();
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var departmentRepositoryMock = new Mock<IDepartmentRepository>();
+
+    var task = new TaskItem
+    {
+        Id = 1,
+        Title = "Geciken Devam Eden Görev",
+        Status = TaskStatuses.InProgress,
+        Priority = "High",
+        InternId = 1,
+        DueDate = DateTime.UtcNow.AddHours(-3)
+    };
+
+    internRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(new List<Intern>());
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(new List<TaskItem>
+        {
+            task
+        });
+
+    departmentRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(new List<Department>());
+
+    var service = new DashboardService(
+        internRepositoryMock.Object,
+        taskRepositoryMock.Object,
+        departmentRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetStatsAsync(
+        1,
+        Roles.Admin);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(1, result.Data.TaskCount);
+    Assert.Equal(0, result.Data.InProgressTaskCount);
+    Assert.Equal(1, result.Data.OverdueTaskCount);
+    Assert.Equal(0, result.Data.CompletedTaskCount);
+}
 }

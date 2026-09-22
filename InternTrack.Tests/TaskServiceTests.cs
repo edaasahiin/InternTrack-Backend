@@ -3,6 +3,7 @@ using InternTrack.Business.Services;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
 using InternTrack.DataAccess.Interfaces;
+using InternTrack.Core.Constants;
 using Moq;
 
 namespace InternTrack.Tests;
@@ -1349,4 +1350,1455 @@ public class TaskServiceTests
         taskRepository.Verify(repository => repository.GetByIdIncludingInactiveAsync(It.IsAny<int>()), Times.Never);
         internRepository.Verify(repository => repository.GetByIdAsync(It.IsAny<int>()), Times.Never);
     }
+
+    [Fact]
+public async Task DeleteAsync_InternTriesToDeleteAssignedTaskWithoutPermission_ShouldReturnForbidden()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+    var taskId = 41;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Yönetici Tarafından Atanan Görev",
+        Status = "Done",
+        Priority = "Medium",
+        InternId = internId,
+        CreatedByUserId = 1,
+        CanInternDeleteWhenCompleted = false,
+        IsActive = true
+    };
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.DeleteAsync(
+        taskId,
+        userId,
+        "Intern");
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.Forbidden, result.Type);
+    Assert.Equal(
+        "Bu görevi silme yetkiniz yok.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task DeleteAsync_InternDeletesCompletedAssignedTaskWithPermission_ShouldDeleteSuccessfully()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+    var taskId = 42;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Tamamlanan Yönetici Görevi",
+        Status = "Done",
+        Priority = "Medium",
+        InternId = internId,
+        CreatedByUserId = 1,
+        CanInternDeleteWhenCompleted = true,
+        IsActive = true
+    };
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.DeleteAsync(
+        taskId,
+        userId,
+        "Intern");
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.Equal(
+        "Görev silindi.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.DeleteAsync(task),
+        Times.Once);
+}
+
+[Fact]
+public async Task UpdateAsync_InternStartsToDoTask_ShouldUpdateSuccessfully()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+    var taskId = 43;
+
+    var existingTask = new TaskItem
+    {
+        Id = taskId,
+        Title = "Başlatılacak Görev",
+        Description = "Başlatma testi",
+        Status = "ToDo",
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = internId,
+        CreatedByUserId = userId,
+        IsActive = true
+    };
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var updateDto = new UpdateTaskDto
+    {
+        Title = existingTask.Title,
+        Description = existingTask.Description,
+        Status = "InProgress",
+        Priority = existingTask.Priority,
+        DueDate = existingTask.DueDate,
+        InternId = internId,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(existingTask);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.UpdateAsync(
+        taskId,
+        updateDto,
+        userId,
+        "Intern");
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.Equal("Görev güncellendi.", result.Message);
+    Assert.Equal("InProgress", existingTask.Status);
+    Assert.Null(existingTask.CompletedAt);
+
+    taskRepositoryMock.Verify(
+        repository => repository.UpdateAsync(existingTask),
+        Times.Once);
+}
+
+[Fact]
+public async Task UpdateAsync_InternTriesToReopenCompletedTask_ShouldReturnValidationError()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+    var taskId = 44;
+
+    var existingTask = new TaskItem
+    {
+        Id = taskId,
+        Title = "Tamamlanmış Görev",
+        Description = "Yeniden açılmamalı",
+        Status = "Done",
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = internId,
+        CreatedByUserId = userId,
+        CompletedAt = DateTime.UtcNow.AddHours(-1),
+        IsActive = true
+    };
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var updateDto = new UpdateTaskDto
+    {
+        Title = existingTask.Title,
+        Description = existingTask.Description,
+        Status = "InProgress",
+        Priority = existingTask.Priority,
+        DueDate = existingTask.DueDate,
+        InternId = internId,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(existingTask);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.UpdateAsync(
+        taskId,
+        updateDto,
+        userId,
+        "Intern");
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.ValidationError, result.Type);
+
+    Assert.Equal("Done", existingTask.Status);
+    Assert.NotNull(existingTask.CompletedAt);
+
+    taskRepositoryMock.Verify(
+        repository => repository.UpdateAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task DeleteAsync_InternTriesToDeleteIncompleteAssignedTaskWithPermission_ShouldReturnForbidden()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+    var taskId = 45;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Henüz Tamamlanmamış Görev",
+        Status = "InProgress",
+        Priority = "Medium",
+        InternId = internId,
+        CreatedByUserId = 1,
+        CanInternDeleteWhenCompleted = true,
+        IsActive = true
+    };
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.DeleteAsync(
+        taskId,
+        userId,
+        "Intern");
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.Forbidden, result.Type);
+
+    taskRepositoryMock.Verify(
+        repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task DeleteAsync_InternTriesToDeleteAnotherInternTask_ShouldReturnForbidden()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var currentInternId = 3;
+    var otherInternId = 7;
+    var taskId = 46;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Başka Stajyerin Görevi",
+        Status = "Done",
+        Priority = "Medium",
+        InternId = otherInternId,
+        CreatedByUserId = 99,
+        CanInternDeleteWhenCompleted = true,
+        IsActive = true
+    };
+
+    var currentIntern = new Intern
+    {
+        Id = currentInternId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(currentIntern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.DeleteAsync(
+        taskId,
+        userId,
+        "Intern");
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.Forbidden, result.Type);
+
+    taskRepositoryMock.Verify(
+        repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task UpdateAsync_HRTriesToReopenCompletedTask_ShouldReturnValidationError()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var taskId = 50;
+    var hrUserId = 2;
+    var internId = 3;
+
+    var existingTask = new TaskItem
+    {
+        Id = taskId,
+        Title = "Tamamlanmış Görev",
+        Description = "Yeniden açılmamalı",
+        Status = TaskStatuses.Done,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = internId,
+        CreatedByUserId = 1,
+        CompletedAt = DateTime.UtcNow.AddHours(-1),
+        IsActive = true
+    };
+
+    var selectedIntern = new Intern
+    {
+        Id = internId,
+        UserId = 10,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var updateDto = new UpdateTaskDto
+    {
+        Title = existingTask.Title,
+        Description = existingTask.Description,
+        Status = TaskStatuses.InProgress,
+        Priority = existingTask.Priority,
+        DueDate = existingTask.DueDate,
+        InternId = internId,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(existingTask);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(internId))
+        .ReturnsAsync(selectedIntern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.UpdateAsync(
+        taskId,
+        updateDto,
+        hrUserId,
+        Roles.HR);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.ValidationError, result.Type);
+
+    Assert.Equal(TaskStatuses.Done, existingTask.Status);
+    Assert.NotNull(existingTask.CompletedAt);
+
+    taskRepositoryMock.Verify(
+        repository => repository.UpdateAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task UpdateAsync_AdminTriesToChangeToDoDirectlyToDone_ShouldReturnValidationError()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var taskId = 51;
+    var adminUserId = 1;
+    var internId = 3;
+
+    var existingTask = new TaskItem
+    {
+        Id = taskId,
+        Title = "Admin Status Test",
+        Description = "ToDo doğrudan Done olmamalı",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = internId,
+        CreatedByUserId = adminUserId,
+        IsActive = true
+    };
+
+    var selectedIntern = new Intern
+    {
+        Id = internId,
+        UserId = 10,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var updateDto = new UpdateTaskDto
+    {
+        Title = existingTask.Title,
+        Description = existingTask.Description,
+        Status = TaskStatuses.Done,
+        Priority = existingTask.Priority,
+        DueDate = existingTask.DueDate,
+        InternId = internId,
+        CanInternDeleteWhenCompleted = false,
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdIncludingInactiveAsync(taskId))
+        .ReturnsAsync(existingTask);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(internId))
+        .ReturnsAsync(selectedIntern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.UpdateAsync(
+        taskId,
+        updateDto,
+        adminUserId,
+        Roles.Admin);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.ValidationError, result.Type);
+
+    Assert.Equal(
+        "Görev tamamlanmadan önce başlatılmalıdır.",
+        result.Message);
+
+    Assert.Equal(TaskStatuses.ToDo, existingTask.Status);
+    Assert.Null(existingTask.CompletedAt);
+
+    taskRepositoryMock.Verify(
+        repository => repository.UpdateAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task UpdateAsync_HRTriesToMoveInProgressBackToToDo_ShouldReturnValidationError()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var taskId = 52;
+    var hrUserId = 2;
+    var internId = 3;
+
+    var existingTask = new TaskItem
+    {
+        Id = taskId,
+        Title = "HR Status Test",
+        Description = "InProgress tekrar ToDo olmamalı",
+        Status = TaskStatuses.InProgress,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = internId,
+        CreatedByUserId = 1,
+        CompletedAt = null,
+        IsActive = true
+    };
+
+    var selectedIntern = new Intern
+    {
+        Id = internId,
+        UserId = 10,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var updateDto = new UpdateTaskDto
+    {
+        Title = existingTask.Title,
+        Description = existingTask.Description,
+        Status = TaskStatuses.ToDo,
+        Priority = existingTask.Priority,
+        DueDate = existingTask.DueDate,
+        InternId = internId,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(existingTask);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(internId))
+        .ReturnsAsync(selectedIntern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.UpdateAsync(
+        taskId,
+        updateDto,
+        hrUserId,
+        Roles.HR);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.ValidationError, result.Type);
+
+    Assert.Equal(
+        "Geçersiz görev durumu.",
+        result.Message);
+
+    Assert.Equal(
+        TaskStatuses.InProgress,
+        existingTask.Status);
+
+    taskRepositoryMock.Verify(
+        repository => repository.UpdateAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task AddAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+
+    var dto = new CreateTaskDto
+    {
+        Title = "Yeni Görev",
+        Description = "Test",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = 999,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync((Intern?)null);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.AddAsync(
+        dto,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.NotFound, result.Type);
+    Assert.Equal(
+        "Stajyer profili bulunamadı.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.AddAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task AddAsync_UnauthorizedRole_ShouldReturnForbidden()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 99;
+
+    var dto = new CreateTaskDto
+    {
+        Title = "Yetkisiz Görev",
+        Description = "Test",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(1),
+        InternId = 1,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.AddAsync(
+        dto,
+        userId,
+        "Guest");
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.Forbidden, result.Type);
+
+    Assert.Equal(
+        "Bu işlem için yetkiniz yok.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.AddAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByUserIdAsync(It.IsAny<int>()),
+        Times.Never);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task AddAsync_PastDueDate_ShouldReturnValidationError()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+
+    var dto = new CreateTaskDto
+    {
+        Title = "Geçmiş Tarihli Görev",
+        Description = "Test",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddHours(-2),
+        InternId = 1,
+        CanInternDeleteWhenCompleted = false
+    };
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.AddAsync(
+        dto,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.ValidationError, result.Type);
+
+    Assert.Equal(
+        "Son teslim tarihi geçmiş bir tarih ve saat olamaz.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.AddAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByUserIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task AddAsync_AdminSelectedInternDoesNotExist_ShouldReturnValidationError()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var adminUserId = 1;
+    var internId = 999;
+
+    var dto = new CreateTaskDto
+    {
+        Title = "Yeni Görev",
+        Description = "Test",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+        InternId = internId,
+        CanInternDeleteWhenCompleted = true
+    };
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(internId))
+        .ReturnsAsync((Intern?)null);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.AddAsync(
+        dto,
+        adminUserId,
+        Roles.Admin);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.ValidationError, result.Type);
+
+    Assert.Equal(
+        "Stajyer bulunamadı.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.AddAsync(It.IsAny<TaskItem>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task AddAsync_InternShouldIgnoreDtoInternIdAndAssignTaskToOwnProfile()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var ownInternId = 3;
+    var anotherInternId = 99;
+
+    var currentIntern = new Intern
+    {
+        Id = ownInternId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var dto = new CreateTaskDto
+    {
+        Title = "Kendi Görevim",
+        Description = "Test",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        DueDate = DateTime.UtcNow.AddDays(2),
+
+        // Bilerek başka bir intern id veriyoruz
+        InternId = anotherInternId,
+
+        CanInternDeleteWhenCompleted = true
+    };
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(currentIntern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.AddAsync(
+        dto,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+
+    taskRepositoryMock.Verify(
+        repository => repository.AddAsync(
+            It.Is<TaskItem>(task =>
+                task.InternId == ownInternId &&
+                task.CreatedByUserId == userId &&
+                task.CanInternDeleteWhenCompleted == false)),
+        Times.Once);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetByIdAsync_InternTriesToAccessAnotherInternTask_ShouldReturnForbidden()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var currentInternId = 3;
+    var otherInternId = 7;
+    var taskId = 60;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Başka Stajyerin Görevi",
+        Description = "Erişim testi",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        InternId = otherInternId,
+        CreatedByUserId = 99,
+        IsActive = true
+    };
+
+    var currentIntern = new Intern
+    {
+        Id = currentInternId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(currentIntern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetByIdAsync(
+        taskId,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.Forbidden, result.Type);
+
+    Assert.Equal(
+        "Bu göreve erişim yetkiniz yok.",
+        result.Message);
+}
+
+[Fact]
+public async Task GetByIdAsync_InternAccessesOwnTask_ShouldReturnTaskSuccessfully()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+    var taskId = 61;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Kendi Görevim",
+        Description = "Erişim testi",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        InternId = internId,
+        CreatedByUserId = userId,
+        IsActive = true
+    };
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetByIdAsync(
+        taskId,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(taskId, result.Data.Id);
+    Assert.Equal("Kendi Görevim", result.Data.Title);
+    Assert.Equal(internId, result.Data.InternId);
+}
+
+[Fact]
+public async Task GetAllAsync_Intern_ShouldReturnOnlyOwnTasks()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 10;
+    var internId = 3;
+
+    var intern = new Intern
+    {
+        Id = internId,
+        UserId = userId,
+        Name = "Test",
+        Surname = "Intern",
+        Email = "test@example.com",
+        IsActive = true
+    };
+
+    var ownTasks = new List<TaskItem>
+    {
+        new()
+        {
+            Id = 1,
+            Title = "Own Task 1",
+            Status = TaskStatuses.ToDo,
+            Priority = "Medium",
+            InternId = internId
+        },
+        new()
+        {
+            Id = 2,
+            Title = "Own Task 2",
+            Status = TaskStatuses.InProgress,
+            Priority = "High",
+            InternId = internId
+        }
+    };
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync(intern);
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByInternIdAsync(internId))
+        .ReturnsAsync(ownTasks);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetAllAsync(
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(2, result.Data.Count);
+    Assert.All(
+        result.Data,
+        task => Assert.Equal(internId, task.InternId));
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetByInternIdAsync(internId),
+        Times.Once);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetAllAsync(),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetAllAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var userId = 999;
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync((Intern?)null);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetAllAsync(
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.NotFound, result.Type);
+
+    Assert.Equal(
+        "Stajyer profili bulunamadı.",
+        result.Message);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetByInternIdAsync(It.IsAny<int>()),
+        Times.Never);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetAllAsync(),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetAllAsync_Admin_ShouldReturnAllTasks()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var allTasks = new List<TaskItem>
+    {
+        new()
+        {
+            Id = 1,
+            Title = "Task 1",
+            Status = TaskStatuses.ToDo,
+            Priority = "Medium",
+            InternId = 3
+        },
+        new()
+        {
+            Id = 2,
+            Title = "Task 2",
+            Status = TaskStatuses.InProgress,
+            Priority = "High",
+            InternId = 7
+        }
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(allTasks);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetAllAsync(
+        1,
+        Roles.Admin);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(2, result.Data.Count);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetAllAsync(),
+        Times.Once);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetByInternIdAsync(It.IsAny<int>()),
+        Times.Never);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByUserIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetAllAsync_HR_ShouldReturnAllTasks()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var allTasks = new List<TaskItem>
+    {
+        new()
+        {
+            Id = 1,
+            Title = "Task 1",
+            Status = TaskStatuses.ToDo,
+            Priority = "Medium",
+            InternId = 3
+        },
+        new()
+        {
+            Id = 2,
+            Title = "Task 2",
+            Status = TaskStatuses.Done,
+            Priority = "Low",
+            InternId = 7
+        }
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetAllAsync())
+        .ReturnsAsync(allTasks);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetAllAsync(
+        2,
+        Roles.HR);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(2, result.Data.Count);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetAllAsync(),
+        Times.Once);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetByInternIdAsync(It.IsAny<int>()),
+        Times.Never);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByUserIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetByIdAsync_TaskDoesNotExist_ShouldReturnNotFound()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var taskId = 999;
+    var userId = 10;
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync((TaskItem?)null);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetByIdAsync(
+        taskId,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.NotFound, result.Type);
+    Assert.Equal(
+        "Görev bulunamadı.",
+        result.Message);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByUserIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetByIdAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var taskId = 1;
+    var userId = 999;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Test Task",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        InternId = 3,
+        CreatedByUserId = 1,
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    internRepositoryMock
+        .Setup(repository => repository.GetByUserIdAsync(userId))
+        .ReturnsAsync((Intern?)null);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetByIdAsync(
+        taskId,
+        userId,
+        Roles.Intern);
+
+    // ASSERT
+    Assert.False(result.Success);
+    Assert.Equal(ResultType.NotFound, result.Type);
+    Assert.Equal(
+        "Stajyer profili bulunamadı.",
+        result.Message);
+}
+
+[Fact]
+public async Task GetByIdAsync_Admin_ShouldReturnTaskWithoutInternCheck()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var taskId = 1;
+    var adminUserId = 100;
+
+    var task = new TaskItem
+    {
+        Id = taskId,
+        Title = "Admin View Task",
+        Description = "Test",
+        Status = TaskStatuses.ToDo,
+        Priority = "Medium",
+        InternId = 3,
+        CreatedByUserId = 1,
+        IsActive = true
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetByIdAsync(taskId))
+        .ReturnsAsync(task);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result = await service.GetByIdAsync(
+        taskId,
+        adminUserId,
+        Roles.Admin);
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(taskId, result.Data.Id);
+    Assert.Equal("Admin View Task", result.Data.Title);
+
+    internRepositoryMock.Verify(
+        repository => repository.GetByUserIdAsync(It.IsAny<int>()),
+        Times.Never);
+}
+
+[Fact]
+public async Task GetAllIncludingInactiveAsync_ShouldReturnAllTasks()
+{
+    // ARRANGE
+    var taskRepositoryMock = new Mock<ITaskRepository>();
+    var internRepositoryMock = new Mock<IInternRepository>();
+
+    var tasks = new List<TaskItem>
+    {
+        new()
+        {
+            Id = 1,
+            Title = "Aktif Görev",
+            Status = TaskStatuses.ToDo,
+            Priority = "Medium",
+            InternId = 3,
+            IsActive = true
+        },
+        new()
+        {
+            Id = 2,
+            Title = "Pasif Görev",
+            Status = TaskStatuses.Done,
+            Priority = "Low",
+            InternId = 7,
+            IsActive = false
+        }
+    };
+
+    taskRepositoryMock
+        .Setup(repository => repository.GetAllIncludingInactiveAsync())
+        .ReturnsAsync(tasks);
+
+    var service = new TaskService(
+        taskRepositoryMock.Object,
+        internRepositoryMock.Object);
+
+    // ACT
+    var result =
+        await service.GetAllIncludingInactiveAsync();
+
+    // ASSERT
+    Assert.True(result.Success);
+    Assert.Equal(ResultType.Success, result.Type);
+    Assert.NotNull(result.Data);
+
+    Assert.Equal(2, result.Data.Count);
+    Assert.Contains(
+        result.Data,
+        task => task.IsActive);
+
+    Assert.Contains(
+        result.Data,
+        task => !task.IsActive);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetAllIncludingInactiveAsync(),
+        Times.Once);
+
+    taskRepositoryMock.Verify(
+        repository => repository.GetAllAsync(),
+        Times.Never);
+}
 }

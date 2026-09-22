@@ -1,12 +1,17 @@
 # InternTrack Backend
 
-InternTrack Backend is the server-side application of InternTrack, an internship and task management system developed with ASP.NET Core Web API.
+InternTrack Backend is the server-side application of **InternTrack**, an internship and task management system developed with ASP.NET Core Web API.
+
+The backend provides authentication, authorization, internship management, department management, task management, dashboard statistics, soft delete and restore operations, and business-rule validation.
+
+---
 
 ## Features
 
 - JWT-based authentication
 - HttpOnly cookie-based access and refresh token handling
 - Refresh token rotation
+- Refresh token revocation
 - SHA-256 refresh token hashing
 - Role-based authorization
 - Admin, HR, and Intern roles
@@ -22,7 +27,9 @@ InternTrack Backend is the server-side application of InternTrack, an internship
 - CORS configuration
 - Rate limiting
 - Swagger support in development
-- Unit tests with xUnit and Moq
+- Unit testing with xUnit and Moq
+
+---
 
 ## Tech Stack
 
@@ -34,45 +41,54 @@ InternTrack Backend is the server-side application of InternTrack, an internship
 - xUnit
 - Moq
 
+---
+
 ## Architecture
 
-The backend follows a layered architecture:
+The backend follows a layered architecture.
 
-```text
-InternTrack.Api
-InternTrack.Business
-InternTrack.Core
-InternTrack.DataAccess
-InternTrack.Infrastructure
-InternTrack.Tests
-```
+Main projects:
+
+- `InternTrack.Api`
+- `InternTrack.Business`
+- `InternTrack.Core`
+- `InternTrack.DataAccess`
+- `InternTrack.Infrastructure`
+- `InternTrack.Tests`
 
 ### InternTrack.Api
+
+Responsible for the API layer and application configuration.
 
 Contains:
 
 - Controllers
 - Middleware
 - API helpers
-- Application configuration
 - Authentication and authorization pipeline
-- Rate limiting
+- Rate limiting configuration
 - CORS configuration
 - Swagger configuration
+- Application startup configuration
 
 ### InternTrack.Business
 
-Contains:
+Contains the main business logic of the application.
+
+Includes:
 
 - Business services
 - Service interfaces
 - Business rules
+- Validation logic
 - ServiceResult structures
 - Password hashing utilities
 
 ### InternTrack.Core
 
-Contains:
+Contains shared application models and data structures.
+
+Includes:
 
 - Models
 - DTOs
@@ -82,6 +98,8 @@ Contains:
 - Task priority constants
 
 ### InternTrack.DataAccess
+
+Responsible for database communication and persistence.
 
 Contains:
 
@@ -93,11 +111,18 @@ Contains:
 
 ### InternTrack.Infrastructure
 
-Contains infrastructure-specific implementations such as JWT token generation.
+Contains infrastructure-specific implementations.
+
+Currently includes functionality such as:
+
+- JWT access token generation
+- Refresh token generation
 
 ### InternTrack.Tests
 
-Contains unit tests for:
+Contains unit tests for the business layer.
+
+Main tested areas include:
 
 - Authentication
 - Departments
@@ -105,11 +130,13 @@ Contains unit tests for:
 - Tasks
 - Dashboard statistics
 
+---
+
 ## Authentication
 
 InternTrack uses JWT-based authentication.
 
-The application uses:
+The authentication system includes:
 
 - Short-lived access tokens
 - Refresh tokens
@@ -120,7 +147,17 @@ The application uses:
 
 Inactive Intern accounts are prevented from logging in or refreshing an existing session.
 
+Refresh tokens are rotated when a session is renewed. The previous token is revoked and a new refresh token is generated.
+
+---
+
 ## User Roles
+
+The system supports three roles:
+
+- Admin
+- HR
+- Intern
 
 ### Admin
 
@@ -129,9 +166,10 @@ Admin users can:
 - Manage interns
 - Manage departments
 - Manage tasks
-- Activate and deactivate records
+- Access permitted inactive records
+- Deactivate records
 - Restore inactive records
-- Access inactive records where permitted
+- Perform administrative task operations
 
 ### HR
 
@@ -142,7 +180,7 @@ HR users can:
 - Manage permitted task operations
 - Edit active records
 
-HR users cannot perform Admin-only restore or deactivation operations.
+HR users cannot perform operations that are restricted to Admin users, such as some restore and deactivation operations.
 
 ### Intern
 
@@ -151,10 +189,31 @@ Intern users can:
 - Access their own internship information
 - View assigned tasks
 - Update permitted task statuses
-- Create or manage tasks according to business rules
-- Delete tasks according to assigned permissions
+- Perform task operations according to defined business rules
 
-## Soft Delete
+Intern users cannot manage records that belong to other interns unless explicitly permitted by the business rules.
+
+---
+
+## Business Rules
+
+Business rules are implemented in the Business layer instead of relying only on frontend restrictions.
+
+This ensures that the API protects application rules even when requests are sent directly to backend endpoints.
+
+Examples include:
+
+- Users cannot perform unauthorized operations based on their role.
+- Interns cannot update tasks assigned to another Intern.
+- Invalid task status transitions are rejected.
+- Overdue task restrictions are enforced at the service level.
+- Duplicate data is validated before records are created or updated.
+- Related entities are validated before operations are completed.
+- Inactive Intern accounts cannot log in or refresh sessions.
+
+---
+
+## Soft Delete and Restore
 
 InternTrack supports soft delete for:
 
@@ -162,45 +221,76 @@ InternTrack supports soft delete for:
 - Interns
 - Tasks
 
-Inactive records are excluded through Entity Framework Core query filters.
+Soft-deleted records remain in the database but are marked as inactive.
 
-Admin users can restore records when related business rules are satisfied.
+Entity Framework Core query filters are used to exclude inactive records from normal queries.
 
-For example:
+Admin users can access or restore inactive records where permitted.
+
+Restore operations also include related business-rule checks.
+
+Examples:
 
 - An Intern can only be restored if the related Department is active.
 - A Task can only be restored if the assigned Intern is active.
 
+---
+
 ## Task Rules
 
-Task operations include business rules such as:
+Task operations include several business rules.
+
+Examples include:
 
 - Interns cannot update tasks assigned to another Intern.
 - Overdue tasks cannot be started or completed by Intern users.
-- Intern task status transitions are restricted.
+- Task status transitions are restricted.
 - HR users cannot start or complete overdue tasks without first updating the due date.
 - HR users cannot delete tasks.
-- Admin users can manage active and inactive tasks.
+- Admin users can manage active and inactive tasks where permitted.
 - Completed task timestamps are managed automatically.
+
+Task transition rules are validated consistently for different roles at the business layer.
+
+---
 
 ## Security
 
-The backend includes several security measures:
+The backend includes several security-related measures.
 
-- JWT issuer and audience validation
+### Authentication Security
+
+- JWT issuer validation
+- JWT audience validation
+- Access token validation
 - HttpOnly cookies
 - Secure cookies outside development
 - Refresh token hashing
-- Refresh token rotation and revocation
+- Refresh token rotation
+- Refresh token revocation
+
+### Authorization
+
 - Role-based authorization
+- Admin, HR, and Intern role separation
+- Business-layer permission checks
+
+### API Security
+
 - Rate limiting for authentication endpoints
 - Configurable CORS origins
 - HTTPS redirection outside development
-- Secrets kept outside source-controlled application settings
+- Sensitive values kept outside source-controlled configuration files
+
+The JWT secret key should never be committed to source control.
+
+Environment variables or .NET User Secrets should be used for sensitive configuration values.
+
+---
 
 ## Rate Limiting
 
-Authentication endpoints use rate limiting.
+Authentication-related endpoints use rate limiting.
 
 Examples include:
 
@@ -208,87 +298,120 @@ Examples include:
 - Registration request limits
 - Refresh token request limits
 
-When the configured limit is exceeded, the API returns HTTP 429.
+When the configured request limit is exceeded, the API may return:
+
+    HTTP 429 Too Many Requests
+
+---
 
 ## Database
 
-InternTrack currently uses SQLite with Entity Framework Core.
+InternTrack currently uses **SQLite** with Entity Framework Core.
 
 Database configuration is defined through:
 
-```text
-ConnectionStrings:DefaultConnection
-```
+    ConnectionStrings:DefaultConnection
 
-Entity Framework Core migrations are used to manage schema changes.
+Entity Framework Core migrations are used to manage database schema changes.
 
-## Development
+The DataAccess layer also includes database seeding functionality for initial application data.
 
-Restore dependencies:
-
-```bash
-dotnet restore
-```
-
-Build the solution:
-
-```bash
-dotnet build
-```
-
-Run the API:
-
-```bash
-dotnet run --project InternTrack.Api
-```
-
-Run tests:
-
-```bash
-dotnet test
-```
+---
 
 ## Configuration
 
 Important configuration sections include:
 
-```text
-ConnectionStrings
-Jwt
-Cors
-Logging
-```
+- `ConnectionStrings`
+- `Jwt`
+- `Cors`
+- `Logging`
 
-The JWT secret key should not be committed to source control.
+Sensitive values such as JWT secret keys should not be stored directly in source-controlled application settings.
 
-Use environment variables or .NET User Secrets for sensitive values.
+Use:
+
+- Environment variables
+- .NET User Secrets
+
+for sensitive configuration values.
+
+---
+
+## Development
+
+### Restore Dependencies
+
+    dotnet restore
+
+### Build the Solution
+
+    dotnet build
+
+### Run the API
+
+    dotnet run --project InternTrack.Api
+
+### Run Unit Tests
+
+    dotnet test
+
+---
 
 ## Testing
 
-The backend includes unit tests for critical business and authorization rules.
+The backend includes automated unit tests for critical business rules, authorization scenarios, authentication flows, and validation cases.
+
+Tests are implemented using:
+
+- xUnit
+- Moq
 
 Run all tests with:
 
-```bash
-dotnet test
-```
+    dotnet test
 
 Current test coverage includes:
 
 - Login validation
+- Invalid password scenarios
 - Inactive Intern authentication rules
-- Refresh token validation and rotation
+- Intern accounts without related Intern profiles
+- Refresh token validation
+- Refresh token expiration
+- Refresh token rotation
+- Refresh token revocation
+- Logout behavior
+- Password change scenarios
+- Profile updates
+- Avatar updates
+- Email validation and normalization
+- Role-based authorization
+- Department creation and updates
 - Department soft delete and restore
+- Intern creation and updates
 - Intern soft delete and restore
 - Task update authorization
-- Overdue task rules
+- Task status transitions
+- Overdue task restrictions
 - Task deletion authorization
 - Task restore rules
 - Dashboard statistics
+- Missing related entity scenarios
+- Validation edge cases
+
+Current test status:
+
+    144 tests passed
+    0 tests failed
+
+---
 
 ## Frontend
 
-The frontend is maintained in a separate repository and is developed with:
+The frontend is maintained in a separate repository.
+
+It is developed using:
 
 - React
 - TypeScript
@@ -296,8 +419,114 @@ The frontend is maintained in a separate repository and is developed with:
 - Axios
 - React Router
 
+The frontend communicates with the backend API and uses cookie-based authentication for access and refresh token handling.
+
+---
+
+## Documentation
+
+Additional project documentation is available in the `docs` directory.
+
+### API Documentation
+
+File:
+
+    docs/API.md
+
+Contains:
+
+- Authentication endpoints
+- Dashboard endpoint
+- Department endpoints
+- Intern endpoints
+- Task endpoints
+- Role-based access information
+- Authentication cookie behavior
+- Rate limiting information
+- API security notes
+
+### Architecture Documentation
+
+File:
+
+    docs/Architecture.md
+
+Contains:
+
+- Layered architecture overview
+- Responsibilities of each project
+- Controller and service separation
+- Repository pattern
+- ServiceResult pattern
+- DTO usage
+- Authentication architecture
+- Authorization architecture
+- Soft delete and restore flow
+- Dashboard architecture
+- Error handling
+- Logging
+- Frontend and backend communication
+
+### Authentication Documentation
+
+File:
+
+    docs/AUTHENTICATION.md
+
+Contains:
+
+- Login flow
+- Access token handling
+- Refresh token handling
+- Refresh token rotation
+- Refresh token revocation
+- HttpOnly cookie configuration
+- Current user flow
+- Password change flow
+- Profile update flow
+- Avatar update flow
+- Logout flow
+- Inactive Intern handling
+- Role-based authorization
+- Rate limiting
+- Authentication security summary
+
+### Setup Guide
+
+File:
+
+    docs/SETUP.md
+
+Contains:
+
+- Backend setup
+- Frontend setup
+- Dependency installation
+- Database migration steps
+- JWT configuration
+- Local development configuration
+- CORS configuration
+- Development startup order
+- Build and test commands
+- Verification checklist
+- Troubleshooting information
+
 ## Project Status
 
 InternTrack Backend v1 is functionally complete.
 
-The current version includes authentication, authorization, soft delete, task management, internship management, department management, dashboard statistics, security hardening, and automated tests.
+The current version includes:
+
+- Authentication and authorization
+- Role-based access control
+- Internship management
+- Department management
+- Task management
+- Soft delete and restore operations
+- Dashboard statistics
+- Refresh token management
+- Security improvements
+- Business-rule validation
+- Automated unit testing
+
+The project is currently in the **documentation, final review, and deployment preparation phase**.
