@@ -4,7 +4,7 @@ using InternTrack.Core.Models;
 
 namespace InternTrack.Business.Interfaces;
 
-public interface ITaskService
+public interface ITaskService : IScopedService
 {
     Task<ServiceResult<List<TaskItem>>> GetAllAsync(int userId, string role);
 
@@ -16,7 +16,7 @@ public interface ITaskService
 
     Task<ServiceResult> UpdateAsync(int id, UpdateTaskDto dto, int userId, string role);
 
-    Task<ServiceResult> DeleteAsync(int id, int userId, string role);
+    Task<ServiceResult> DeactivateTaskAsync(int id, int userId, string role);
 
-    Task<ServiceResult> RestoreAsync(int id);
+    Task<ServiceResult> ReactivateTaskAsync(int id);
 }

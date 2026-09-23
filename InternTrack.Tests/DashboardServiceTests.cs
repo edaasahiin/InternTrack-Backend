@@ -1,3 +1,4 @@
+using InternTrack.Business.Interfaces;
 using InternTrack.Business.Common;
 using InternTrack.Business.Services;
 using InternTrack.Core.Constants;
@@ -115,7 +116,8 @@ public class DashboardServiceTests
         var service = new DashboardService(
             internRepositoryMock.Object,
             taskRepositoryMock.Object,
-            departmentRepositoryMock.Object);
+            departmentRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.GetStatsAsync(
@@ -186,7 +188,8 @@ public class DashboardServiceTests
         var service = new DashboardService(
             internRepositoryMock.Object,
             taskRepositoryMock.Object,
-            departmentRepositoryMock.Object);
+            departmentRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.GetStatsAsync(
@@ -291,7 +294,8 @@ public class DashboardServiceTests
         var service = new DashboardService(
             internRepositoryMock.Object,
             taskRepositoryMock.Object,
-            departmentRepositoryMock.Object);
+            departmentRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.GetStatsAsync(
@@ -345,7 +349,8 @@ public class DashboardServiceTests
         var service = new DashboardService(
             internRepositoryMock.Object,
             taskRepositoryMock.Object,
-            departmentRepositoryMock.Object);
+            departmentRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.GetStatsAsync(
@@ -409,7 +414,8 @@ public class DashboardServiceTests
         var service = new DashboardService(
             internRepositoryMock.Object,
             taskRepositoryMock.Object,
-            departmentRepositoryMock.Object);
+            departmentRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.GetStatsAsync(
@@ -465,7 +471,8 @@ public async Task GetStatsAsync_TaskWithoutDueDate_ShouldNotCountAsOverdue()
     var service = new DashboardService(
         internRepositoryMock.Object,
         taskRepositoryMock.Object,
-        departmentRepositoryMock.Object);
+        departmentRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetStatsAsync(
@@ -517,7 +524,8 @@ public async Task GetStatsAsync_OverdueInProgressTask_ShouldCountAsOverdue()
     var service = new DashboardService(
         internRepositoryMock.Object,
         taskRepositoryMock.Object,
-        departmentRepositoryMock.Object);
+        departmentRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetStatsAsync(

@@ -57,7 +57,7 @@ public class TaskRepository : ITaskRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(TaskItem task)
+    public async Task DeactivateTaskAsync(TaskItem task)
     {
         task.IsActive = false;
 
@@ -66,7 +66,7 @@ public class TaskRepository : ITaskRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task RestoreAsync(TaskItem task)
+    public async Task ReactivateTaskAsync(TaskItem task)
     {
         task.IsActive = true;
 

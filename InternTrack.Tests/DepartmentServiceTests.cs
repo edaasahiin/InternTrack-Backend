@@ -1,3 +1,4 @@
+using InternTrack.Business.Interfaces;
 using InternTrack.Business.Common;
 using InternTrack.Business.Services;
 using InternTrack.Core.DTOs;
@@ -22,9 +23,10 @@ public class DepartmentServiceTests
             Name = "Software Development"
         };
 
-        departmentRepositoryMock.Setup(repository => repository.NameExistsAsync(dto.Name, null)).ReturnsAsync(true);
+        departmentRepositoryMock.Setup(repository => repository.GetByNameIncludingInactiveAsync(dto.Name, null)).ReturnsAsync(new Department { Id = 99, Name = dto.Name });
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
         var result = await service.AddAsync(dto);
         // ASSERT
@@ -56,7 +58,8 @@ public class DepartmentServiceTests
             repository => repository.GetByIdAsync(departmentId)).ReturnsAsync(
             (Department? )null);
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
         var result = await service.UpdateAsync(departmentId, dto);
         // ASSERT
@@ -70,7 +73,7 @@ public class DepartmentServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_DepartmentHasInterns_ShouldReturnConflict()
+    public async Task DeactivateDepartmentAsync_DepartmentHasInterns_ShouldReturnConflict()
     {
         // ARRANGE
         var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -89,9 +92,10 @@ public class DepartmentServiceTests
 
         internRepositoryMock.Setup(repository => repository.ExistsByDepartmentIdAsync(departmentId)).ReturnsAsync(true);
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.DeleteAsync(departmentId);
+        var result = await service.DeactivateDepartmentAsync(departmentId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -99,11 +103,11 @@ public class DepartmentServiceTests
 
         Assert.Equal("Bu departmana bağlı stajyerler olduğu için departman silinemez.", result.Message);
 
-        departmentRepositoryMock.Verify(repository => repository.DeleteAsync(It.IsAny<Department>()), Times.Never);
+        departmentRepositoryMock.Verify(repository => repository.DeactivateDepartmentAsync(It.IsAny<Department>()), Times.Never);
     }
 
     [Fact]
-    public async Task DeleteAsync_DepartmentHasNoInterns_ShouldDeleteSuccessfully()
+    public async Task DeactivateDepartmentAsync_DepartmentHasNoInterns_ShouldDeactivateSuccessfully()
     {
         // ARRANGE
         var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -124,9 +128,10 @@ public class DepartmentServiceTests
             repository => repository.ExistsByDepartmentIdAsync(departmentId)).ReturnsAsync(
             false);
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.DeleteAsync(departmentId);
+        var result = await service.DeactivateDepartmentAsync(departmentId);
         // ASSERT
         Assert.True(result.Success);
 
@@ -134,11 +139,11 @@ public class DepartmentServiceTests
 
         Assert.Equal("Departman silindi.", result.Message);
 
-        departmentRepositoryMock.Verify(repository => repository.DeleteAsync(department), Times.Once);
+        departmentRepositoryMock.Verify(repository => repository.DeactivateDepartmentAsync(department), Times.Once);
     }
 
     [Fact]
-    public async Task RestoreAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
+    public async Task ReactivateDepartmentAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
     {
         // ARRANGE
         var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -151,9 +156,10 @@ public class DepartmentServiceTests
             repository => repository.GetByIdIncludingInactiveAsync(departmentId)).ReturnsAsync(
             (Department? )null);
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(departmentId);
+        var result = await service.ReactivateDepartmentAsync(departmentId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -161,11 +167,11 @@ public class DepartmentServiceTests
 
         Assert.Equal("Departman bulunamadı.", result.Message);
 
-        departmentRepositoryMock.Verify(repository => repository.RestoreAsync(It.IsAny<Department>()), Times.Never);
+        departmentRepositoryMock.Verify(repository => repository.ReactivateDepartmentAsync(It.IsAny<Department>()), Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_DepartmentAlreadyActive_ShouldReturnConflict()
+    public async Task ReactivateDepartmentAsync_DepartmentAlreadyActive_ShouldReturnConflict()
     {
         // ARRANGE
         var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -185,9 +191,10 @@ public class DepartmentServiceTests
             repository => repository.GetByIdIncludingInactiveAsync(departmentId)).ReturnsAsync(
             department);
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(departmentId);
+        var result = await service.ReactivateDepartmentAsync(departmentId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -195,11 +202,11 @@ public class DepartmentServiceTests
 
         Assert.Equal("Departman zaten aktif.", result.Message);
 
-        departmentRepositoryMock.Verify(repository => repository.RestoreAsync(It.IsAny<Department>()), Times.Never);
+        departmentRepositoryMock.Verify(repository => repository.ReactivateDepartmentAsync(It.IsAny<Department>()), Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_InactiveDepartment_ShouldRestoreSuccessfully()
+    public async Task ReactivateDepartmentAsync_InactiveDepartment_ShouldReactivateSuccessfully()
     {
         // ARRANGE
         var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -219,9 +226,10 @@ public class DepartmentServiceTests
             repository => repository.GetByIdIncludingInactiveAsync(departmentId)).ReturnsAsync(
             department);
 
-        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object);
+        var service = new DepartmentService(departmentRepositoryMock.Object, internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(departmentId);
+        var result = await service.ReactivateDepartmentAsync(departmentId);
         // ASSERT
         Assert.True(result.Success);
 
@@ -229,7 +237,7 @@ public class DepartmentServiceTests
 
         Assert.Equal("Departman tekrar aktif hale getirildi.", result.Message);
 
-        departmentRepositoryMock.Verify(repository => repository.RestoreAsync(department), Times.Once);
+        departmentRepositoryMock.Verify(repository => repository.ReactivateDepartmentAsync(department), Times.Once);
     }
 
     [Fact]
@@ -245,12 +253,13 @@ public async Task AddAsync_ValidDepartment_ShouldAddSuccessfully()
     };
 
     departmentRepositoryMock
-        .Setup(repository => repository.NameExistsAsync(dto.Name, null))
-        .ReturnsAsync(false);
+        .Setup(repository => repository.GetByNameIncludingInactiveAsync(dto.Name, null))
+        .ReturnsAsync((Department?)null);
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(dto);
@@ -292,12 +301,13 @@ public async Task UpdateAsync_DepartmentNameAlreadyExists_ShouldReturnConflict()
         .ReturnsAsync(existingDepartment);
 
     departmentRepositoryMock
-        .Setup(repository => repository.NameExistsAsync(dto.Name, departmentId))
-        .ReturnsAsync(true);
+        .Setup(repository => repository.GetByNameIncludingInactiveAsync(dto.Name, departmentId))
+        .ReturnsAsync(new Department { Id = 99, Name = dto.Name });
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -339,12 +349,13 @@ public async Task UpdateAsync_ValidDepartment_ShouldUpdateSuccessfully()
         .ReturnsAsync(existingDepartment);
 
     departmentRepositoryMock
-        .Setup(repository => repository.NameExistsAsync(dto.Name, departmentId))
-        .ReturnsAsync(false);
+        .Setup(repository => repository.GetByNameIncludingInactiveAsync(dto.Name, departmentId))
+        .ReturnsAsync((Department?)null);
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -362,7 +373,7 @@ public async Task UpdateAsync_ValidDepartment_ShouldUpdateSuccessfully()
 }
 
 [Fact]
-public async Task DeleteAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
+public async Task DeactivateDepartmentAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
 {
     // ARRANGE
     var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -376,10 +387,11 @@ public async Task DeleteAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(departmentId);
+    var result = await service.DeactivateDepartmentAsync(departmentId);
 
     // ASSERT
     Assert.False(result.Success);
@@ -391,7 +403,7 @@ public async Task DeleteAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
         Times.Never);
 
     departmentRepositoryMock.Verify(
-        repository => repository.DeleteAsync(It.IsAny<Department>()),
+        repository => repository.DeactivateDepartmentAsync(It.IsAny<Department>()),
         Times.Never);
 }
 
@@ -409,7 +421,8 @@ public async Task AddAsync_EmptyDepartmentName_ShouldReturnValidationError()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(dto);
@@ -423,7 +436,7 @@ public async Task AddAsync_EmptyDepartmentName_ShouldReturnValidationError()
         result.Message);
 
     departmentRepositoryMock.Verify(
-        repository => repository.NameExistsAsync(
+        repository => repository.GetByNameIncludingInactiveAsync(
             It.IsAny<string>(),
             It.IsAny<int?>()),
         Times.Never);
@@ -461,7 +474,8 @@ public async Task UpdateAsync_EmptyDepartmentName_ShouldReturnValidationError()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -477,7 +491,7 @@ public async Task UpdateAsync_EmptyDepartmentName_ShouldReturnValidationError()
         result.Message);
 
     departmentRepositoryMock.Verify(
-        repository => repository.NameExistsAsync(
+        repository => repository.GetByNameIncludingInactiveAsync(
             It.IsAny<string>(),
             It.IsAny<int?>()),
         Times.Never);
@@ -501,12 +515,13 @@ public async Task AddAsync_DepartmentNameWithWhitespace_ShouldTrimAndAddSuccessf
     };
 
     departmentRepositoryMock
-        .Setup(repository => repository.NameExistsAsync("Finance", null))
-        .ReturnsAsync(false);
+        .Setup(repository => repository.GetByNameIncludingInactiveAsync("Finance", null))
+        .ReturnsAsync((Department?)null);
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(dto);
@@ -548,12 +563,13 @@ public async Task UpdateAsync_DepartmentNameWithWhitespace_ShouldTrimAndUpdateSu
         .ReturnsAsync(department);
 
     departmentRepositoryMock
-        .Setup(repository => repository.NameExistsAsync("Finance", departmentId))
-        .ReturnsAsync(false);
+        .Setup(repository => repository.GetByNameIncludingInactiveAsync("Finance", departmentId))
+        .ReturnsAsync((Department?)null);
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -586,7 +602,8 @@ public async Task GetByIdAsync_DepartmentDoesNotExist_ShouldReturnNotFound()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(departmentId);
@@ -621,7 +638,8 @@ public async Task GetByIdAsync_DepartmentExists_ShouldReturnDepartmentSuccessful
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(departmentId);
@@ -669,7 +687,8 @@ public async Task GetAllIncludingInactiveAsync_ShouldReturnActiveAndInactiveDepa
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result =
@@ -724,7 +743,8 @@ public async Task GetAllAsync_ShouldReturnDepartments()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync();
@@ -750,7 +770,7 @@ public async Task GetAllAsync_ShouldReturnDepartments()
 }
 
 [Fact]
-public async Task DeleteAsync_DepartmentDoesNotExist_ShouldNotCheckInterns()
+public async Task DeactivateDepartmentAsync_DepartmentDoesNotExist_ShouldNotCheckInterns()
 {
     // ARRANGE
     var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -764,10 +784,11 @@ public async Task DeleteAsync_DepartmentDoesNotExist_ShouldNotCheckInterns()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(departmentId);
+    var result = await service.DeactivateDepartmentAsync(departmentId);
 
     // ASSERT
     Assert.False(result.Success);
@@ -782,13 +803,13 @@ public async Task DeleteAsync_DepartmentDoesNotExist_ShouldNotCheckInterns()
         Times.Never);
 
     departmentRepositoryMock.Verify(
-        repository => repository.DeleteAsync(
+        repository => repository.DeactivateDepartmentAsync(
             It.IsAny<Department>()),
         Times.Never);
 }
 
 [Fact]
-public async Task DeleteAsync_DepartmentHasInterns_ShouldNotDeleteDepartment()
+public async Task DeactivateDepartmentAsync_DepartmentHasInterns_ShouldNotDeleteDepartment()
 {
     // ARRANGE
     var departmentRepositoryMock = new Mock<IDepartmentRepository>();
@@ -813,10 +834,11 @@ public async Task DeleteAsync_DepartmentHasInterns_ShouldNotDeleteDepartment()
 
     var service = new DepartmentService(
         departmentRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(departmentId);
+    var result = await service.DeactivateDepartmentAsync(departmentId);
 
     // ASSERT
     Assert.False(result.Success);
@@ -827,7 +849,7 @@ public async Task DeleteAsync_DepartmentHasInterns_ShouldNotDeleteDepartment()
         result.Message);
 
     departmentRepositoryMock.Verify(
-        repository => repository.DeleteAsync(
+        repository => repository.DeactivateDepartmentAsync(
             It.IsAny<Department>()),
         Times.Never);
 }

@@ -1,20 +1,19 @@
 using System.Net;
 using System.Text.Json;
+using InternTrack.Business.Interfaces;
 
 namespace InternTrack.Api.Middleware;
 
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
-    public ExceptionHandlingMiddleware(RequestDelegate next, ILogger<ExceptionHandlingMiddleware> logger)
+    public ExceptionHandlingMiddleware(RequestDelegate next)
     {
         _next = next;
-        _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, IAppLogger logger)
     {
         try
         {
@@ -27,19 +26,17 @@ public class ExceptionHandlingMiddleware
                 throw;
             }
 
-            await HandleExceptionAsync(context, exception);
+            await HandleExceptionAsync(context, exception, logger);
         }
     }
 
-    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private static async Task HandleExceptionAsync(HttpContext context, Exception exception, IAppLogger logger)
     {
         var traceId = context.TraceIdentifier;
 
-        _logger.LogError(
+        logger.LogError(
             exception,
-            "Beklenmeyen hata oluştu. Method: {Method}, Path: {Path}, TraceId: {TraceId}",
-            context.Request.Method,
-            context.Request.Path,
+            "Beklenmeyen hata oluştu. TraceId: {TraceId}",
             traceId);
 
         context.Response.Clear();

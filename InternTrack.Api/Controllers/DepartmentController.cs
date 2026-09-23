@@ -1,6 +1,7 @@
-using InternTrack.Core.Constants;
+using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
+using InternTrack.Core.Constants;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -15,99 +16,120 @@ public class DepartmentController : ControllerBase
 {
     private readonly IDepartmentService _service;
 
-    public DepartmentController(IDepartmentService service)
+    public DepartmentController(
+        IDepartmentService service)
     {
         _service = service;
     }
 
     [AllowAnonymous]
     [HttpGet]
-    [ProducesResponseType(typeof(List<Department>), StatusCodes.Status200OK)]
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.GetDepartments))]
     public async Task<IActionResult> GetAll()
     {
-        var departments = await _service.GetAllAsync();
+        var departments =
+            await _service.GetAllAsync();
 
         return Ok(departments);
     }
 
     [Authorize(Roles = Roles.Admin)]
-    [HttpGet("all")]
-    [ProducesResponseType(typeof(List<Department>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [HttpGet("get-all")]
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.GetAllDepartments))]
     public async Task<IActionResult> GetAllIncludingInactive()
     {
-        var departments = await _service.GetAllIncludingInactiveAsync();
+        var departments =
+            await _service.GetAllIncludingInactiveAsync();
 
         return Ok(departments);
     }
 
     [Authorize]
-    [HttpGet("{id:int}")]
-    [ProducesResponseType(typeof(Department), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetById([FromRoute] int id)
+    [HttpGet("get-by-id/{id:int}")]
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.GetDepartmentById))]
+    public async Task<IActionResult> GetById(
+        [FromRoute] int id)
     {
-        var result = await _service.GetByIdAsync(id);
+        var result =
+            await _service.GetByIdAsync(id);
 
-        return ServiceResultMapper.ToActionResult(this, result);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result);
     }
 
     [Authorize(Roles = Roles.AdminOrHR)]
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Add([FromBody] CreateDepartmentDto dto)
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.CreateDepartment))]
+    public async Task<IActionResult> Add(
+        [FromBody] CreateDepartmentDto dto)
     {
-        var result = await _service.AddAsync(dto);
+        var result =
+            await _service.AddAsync(dto);
 
-        return ServiceResultMapper.ToActionResult(this, result, StatusCodes.Status201Created);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result,
+            StatusCodes.Status201Created);
     }
 
     [Authorize(Roles = Roles.AdminOrHR)]
-    [HttpPut("{id:int}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Update([FromRoute] int id, [FromBody] CreateDepartmentDto dto)
+    [HttpPut("update-by-id/{id:int}")]
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.UpdateDepartment))]
+    public async Task<IActionResult> Update(
+        [FromRoute] int id,
+        [FromBody] CreateDepartmentDto dto)
     {
-        var result = await _service.UpdateAsync(id, dto);
+        var result =
+            await _service.UpdateAsync(
+                id,
+                dto);
 
-        return ServiceResultMapper.ToActionResult(this, result);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result);
     }
 
     [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id:int}")]
-    [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Delete([FromRoute] int id)
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.DeactivateDepartment))]
+    public async Task<IActionResult> DeactivateDepartment(
+        [FromRoute] int id)
     {
-        var result = await _service.DeleteAsync(id);
+        var result =
+            await _service.DeactivateDepartmentAsync(id);
 
-        return ServiceResultMapper.ToActionResult(this, result, noContentOnSuccess: true);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result,
+            noContentOnSuccess: true);
     }
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPatch("{id:int}/restore")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Restore([FromRoute] int id)
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.ReactivateDepartment))]
+    public async Task<IActionResult> ReactivateDepartment(
+        [FromRoute] int id)
     {
-        var result = await _service.RestoreAsync(id);
+        var result =
+            await _service.ReactivateDepartmentAsync(id);
 
-        return ServiceResultMapper.ToActionResult(this, result);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result);
     }
 }

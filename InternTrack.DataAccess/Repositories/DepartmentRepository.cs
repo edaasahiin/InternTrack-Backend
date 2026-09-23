@@ -1,5 +1,6 @@
 using InternTrack.DataAccess.Context;
 using InternTrack.DataAccess.Interfaces;
+using InternTrack.DataAccess.Queries;
 using InternTrack.Core.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,12 +35,10 @@ public class DepartmentRepository : IDepartmentRepository
         return await _db.Departments.IgnoreQueryFilters().FirstOrDefaultAsync(department => department.Id == id);
     }
 
-    public async Task<bool> NameExistsAsync(string name, int? excludeId = null)
+    public async Task<Department?> GetByNameIncludingInactiveAsync(string name, int? excludeId = null)
     {
-        var normalizedName = name.Trim().ToLower();
-
-        return await _db.Departments.IgnoreQueryFilters().AnyAsync(
-            department => department.Name.ToLower() == normalizedName && (!excludeId.HasValue || department.Id != excludeId.Value));
+        return await DepartmentQueries.ByNameIncludingInactive(_db.Departments, name, excludeId)
+            .FirstOrDefaultAsync();
     }
 
     public async Task AddAsync(Department department)
@@ -56,7 +55,7 @@ public class DepartmentRepository : IDepartmentRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(Department department)
+    public async Task DeactivateDepartmentAsync(Department department)
     {
         department.IsActive = false;
 
@@ -65,7 +64,7 @@ public class DepartmentRepository : IDepartmentRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task RestoreAsync(Department department)
+    public async Task ReactivateDepartmentAsync(Department department)
     {
         department.IsActive = true;
 

@@ -2,7 +2,7 @@ using InternTrack.Core.Models;
 
 namespace InternTrack.DataAccess.Interfaces;
 
-public interface IInternRepository
+public interface IInternRepository : IScopedRepository
 {
     Task<List<Intern>> GetAllAsync();
 
@@ -22,7 +22,7 @@ public interface IInternRepository
 
     Task UpdateAsync(Intern intern);
 
-    Task DeleteAsync(Intern intern);
+    Task DeactivateInternAsync(Intern intern);
 
-    Task RestoreAsync(Intern intern);
+    Task ReactivateInternAsync(Intern intern);
 }

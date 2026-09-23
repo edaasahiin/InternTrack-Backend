@@ -87,7 +87,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.LoginAsync(dto);
@@ -133,7 +134,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.LoginAsync(dto);
@@ -193,7 +195,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.LoginAsync(dto);
@@ -269,7 +272,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.RegisterAsync(dto);
@@ -307,7 +311,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.RefreshAsync(refreshToken);
@@ -364,7 +369,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
@@ -423,7 +429,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
@@ -488,7 +495,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
@@ -570,7 +578,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
@@ -645,7 +654,8 @@ public class AuthServiceTests
             departmentRepositoryMock.Object,
             tokenServiceMock.Object,
             refreshTokenRepositoryMock.Object,
-            CreateConfiguration());
+            CreateConfiguration(),
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
@@ -738,7 +748,8 @@ public class AuthServiceTests
             departmentRepository.Object,
             tokenService.Object,
             refreshTokenRepository.Object,
-            configuration.Object);
+            configuration.Object,
+            logger: Mock.Of<IAppLogger>());
 
         Task<ServiceResult<LoginResponseDto>> IssueTokens() => isRefresh
             ? service.RefreshAsync("old-raw-token")
@@ -802,7 +813,8 @@ public async Task LoginAsync_UserDoesNotExist_ShouldReturnValidationError()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.LoginAsync(dto);
@@ -855,7 +867,8 @@ public async Task ChangePasswordAsync_ValidCurrentPassword_ShouldUpdatePasswordA
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.ChangePasswordAsync(
@@ -914,7 +927,8 @@ public async Task RegisterAsync_DepartmentDoesNotExist_ShouldNotCreateUser()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.RegisterAsync(dto);
@@ -975,7 +989,8 @@ public async Task RegisterAsync_ValidData_ShouldCreateInternUserSuccessfully()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.RegisterAsync(dto);
@@ -1026,7 +1041,8 @@ public async Task ChangePasswordAsync_UserDoesNotExist_ShouldReturnNotFound()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.ChangePasswordAsync(
@@ -1081,7 +1097,8 @@ public async Task RefreshAsync_UserDoesNotExist_ShouldReturnValidationError()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.RefreshAsync(refreshTokenValue);
@@ -1132,7 +1149,8 @@ public async Task LogoutAsync_ValidRefreshToken_ShouldRevokeTokenSuccessfully()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.LogoutAsync(refreshTokenValue);
@@ -1177,7 +1195,8 @@ public async Task LogoutAsync_RefreshTokenDoesNotExist_ShouldReturnValidationErr
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.LogoutAsync(refreshTokenValue);
@@ -1230,7 +1249,8 @@ public async Task LogoutAsync_AlreadyRevokedToken_ShouldReturnSuccessWithoutUpda
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.LogoutAsync(refreshTokenValue);
@@ -1275,7 +1295,8 @@ public async Task UpdateAvatarAsync_UserDoesNotExist_ShouldReturnValidationError
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAvatarAsync(
@@ -1317,7 +1338,8 @@ public async Task UpdateAvatarAsync_WhitespaceAvatar_ShouldSetAvatarToNull()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAvatarAsync(
@@ -1358,7 +1380,8 @@ public async Task UpdateAvatarAsync_ValidAvatar_ShouldTrimAndUpdateSuccessfully(
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAvatarAsync(
@@ -1403,7 +1426,8 @@ public async Task UpdateProfileAsync_UserDoesNotExist_ShouldReturnValidationErro
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateProfileAsync(
@@ -1454,7 +1478,8 @@ public async Task UpdateProfileAsync_EmailAlreadyUsed_ShouldReturnConflict()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateProfileAsync(
@@ -1512,7 +1537,8 @@ public async Task UpdateProfileAsync_EmailUnchanged_ShouldSkipDuplicateCheckAndU
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateProfileAsync(
@@ -1582,7 +1608,8 @@ public async Task UpdateProfileAsync_ValuesWithWhitespace_ShouldTrimAndUpdateSuc
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateProfileAsync(
@@ -1636,7 +1663,8 @@ public async Task ChangePasswordAsync_NewPasswordSameAsCurrent_ShouldReturnValid
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.ChangePasswordAsync(
@@ -1709,7 +1737,8 @@ public async Task UpdateProfileAsync_UserWithoutIntern_ShouldUpdateUserSuccessfu
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        configuration);
+        configuration,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateProfileAsync(
@@ -1788,7 +1817,8 @@ public async Task LoginAsync_AdminWithoutIntern_ShouldLoginSuccessfully()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        configuration);
+        configuration,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.LoginAsync(dto);
@@ -1856,7 +1886,8 @@ public async Task LoginAsync_InternWithoutInternProfile_ShouldReturnValidationEr
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        configuration);
+        configuration,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.LoginAsync(dto);
@@ -1933,7 +1964,8 @@ public async Task RefreshAsync_InternWithoutInternProfile_ShouldRevokeTokensAndR
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        configuration);
+        configuration,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result =
@@ -2008,7 +2040,8 @@ public async Task RegisterAsync_ValuesWithWhitespace_ShouldTrimAndCreateUserSucc
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.RegisterAsync(dto);
@@ -2067,7 +2100,8 @@ public async Task UpdateProfileAsync_EmailCaseOnlyChange_ShouldSkipDuplicateChec
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateProfileAsync(
@@ -2145,7 +2179,8 @@ public async Task RegisterAsync_ValidData_ShouldSetMustChangePasswordFalse()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.RegisterAsync(dto);
@@ -2194,7 +2229,8 @@ public async Task ChangePasswordAsync_ValidPassword_ShouldSetMustChangePasswordF
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.ChangePasswordAsync(
@@ -2245,7 +2281,8 @@ public async Task UpdateAvatarAsync_NullAvatar_ShouldSetAvatarToNull()
         departmentRepositoryMock.Object,
         tokenServiceMock.Object,
         refreshTokenRepositoryMock.Object,
-        CreateConfiguration());
+        CreateConfiguration(),
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAvatarAsync(

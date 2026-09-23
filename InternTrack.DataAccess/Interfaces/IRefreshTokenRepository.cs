@@ -2,7 +2,7 @@ using InternTrack.Core.Models;
 
 namespace InternTrack.DataAccess.Interfaces;
 
-public interface IRefreshTokenRepository
+public interface IRefreshTokenRepository : IScopedRepository
 {
     /// <summary>
     /// Hashes the raw Token value in place before storing the refresh token.

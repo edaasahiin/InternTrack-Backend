@@ -2,7 +2,7 @@ using InternTrack.Core.Models;
 
 namespace InternTrack.DataAccess.Interfaces;
 
-public interface IDepartmentRepository
+public interface IDepartmentRepository : IScopedRepository
 {
     Task<List<Department>> GetAllAsync();
 
@@ -12,13 +12,17 @@ public interface IDepartmentRepository
 
     Task<Department?> GetByIdIncludingInactiveAsync(int id);
 
-    Task<bool> NameExistsAsync(string name, int? excludeId = null);
+    /// <summary>
+    /// Retrieves a department by trimmed, case-insensitive name, including inactive records.
+    /// Optionally excludes a department ID from the search.
+    /// </summary>
+    Task<Department?> GetByNameIncludingInactiveAsync(string name, int? excludeId = null);
 
     Task AddAsync(Department department);
 
     Task UpdateAsync(Department department);
 
-    Task DeleteAsync(Department department);
+    Task DeactivateDepartmentAsync(Department department);
 
-    Task RestoreAsync(Department department);
+    Task ReactivateDepartmentAsync(Department department);
 }

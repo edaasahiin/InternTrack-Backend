@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\InternTrack.Api\InternTrack.Api.csproj" />
     <ProjectReference Include="..\InternTrack.Business\InternTrack.Business.csproj" />
     <ProjectReference Include="..\InternTrack.Core\InternTrack.Core.csproj" />
   </ItemGroup>

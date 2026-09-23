@@ -3,7 +3,7 @@ using InternTrack.Core.DTOs;
 
 namespace InternTrack.Business.Interfaces;
 
-public interface IAuthService
+public interface IAuthService : IScopedService
 {
     Task<ServiceResult> RegisterAsync(RegisterDto dto);
 

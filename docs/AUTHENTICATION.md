@@ -13,10 +13,13 @@ The authentication system includes:
 - Refresh token rotation
 - Refresh token revocation
 - Role-based authorization
+- Centralized role interpretation
 - Password validation
 - Inactive account validation
 - Session renewal
 - Logout handling
+- Authentication event logging
+- Rate limiting
 
 ---
 
@@ -118,7 +121,10 @@ General flow:
     Password is verified
         |
         v
-    Account status is checked
+    Role is interpreted through RoleHelper
+        |
+        v
+    Required Intern profile state is validated
         |
         v
     Access token is generated
@@ -137,9 +143,15 @@ General flow:
 
 If the email or password is invalid, login is rejected.
 
-If the user has the Intern role, the related Intern profile must exist and must be active.
+For Intern accounts, authentication explicitly checks whether:
 
-Inactive Intern accounts are not allowed to log in.
+- An Intern profile is required
+- The Intern profile is missing
+- The Intern profile exists but is inactive
+
+Intern accounts with missing or inactive Intern profiles are rejected.
+
+Non-Intern users do not require an Intern profile.
 
 ---
 
@@ -182,12 +194,20 @@ General flow:
     User is loaded from database
         |
         v
-    Account status is validated
+    Role is interpreted
+        |
+        v
+    Required Intern profile state is validated
         |
         v
     User information is returned
 
-If the authenticated Intern account is inactive, authentication cookies are cleared and the request is rejected.
+If an authenticated Intern account has a missing or inactive Intern profile:
+
+- Authentication cookies are cleared.
+- The request is rejected.
+
+Non-Intern users are not required to have an Intern profile.
 
 ---
 
@@ -233,7 +253,10 @@ The refresh process follows this general structure:
     Related user is validated
         |
         v
-    Intern account status is checked
+    Role is interpreted through RoleHelper
+        |
+        v
+    Required Intern profile state is validated
         |
         v
     Existing refresh token is revoked
@@ -270,6 +293,8 @@ Examples include:
 - Intern account is inactive
 
 When the refresh process fails, authentication cookies can be cleared.
+
+When current application behavior requires it, existing refresh tokens can also be revoked.
 
 ---
 
@@ -316,23 +341,61 @@ This allows existing sessions to be invalidated when required.
 
 ---
 
-## Inactive Intern Handling
+## Role Handling
 
-Intern accounts have additional account-status validation.
+Role interpretation is centralized through `RoleHelper`.
+
+The application does not scatter role-related `StringComparison` logic across Business services.
+
+`RoleHelper` provides clearly named methods for interpreting role values.
+
+Examples include:
+
+- `IsAdminClaim`
+- `IsHrClaim`
+- `IsInternClaim`
+- `IsInternAccountRole`
+
+The role checks used for authorization-related claim handling preserve the existing business behavior.
+
+Authentication-specific Intern role recognition remains centralized through `IsInternAccountRole`.
+
+This allows the application to keep compatibility with existing stored role values while avoiding repeated ad-hoc string comparisons throughout services.
+
+No database schema or stored role values are changed by this structure.
+
+---
+
+## Intern Profile Validation
+
+Intern accounts have additional authentication requirements.
 
 An Intern user must have:
 
 - A related Intern profile
 - An active Intern profile
 
-If an Intern profile is missing or inactive:
+Authentication logic now distinguishes these conditions explicitly instead of relying on one combined `IsInactiveIntern` helper.
+
+The relevant states are:
+
+1. The user is not an Intern.
+2. The user is an Intern but the Intern profile is missing.
+3. The user is an Intern and the Intern profile is inactive.
+4. The user is an Intern and the Intern profile is active.
+
+For non-Intern users:
+
+- An Intern profile is not required.
+
+For Intern users with a missing or inactive profile:
 
 - Login is rejected.
 - Refresh operations are rejected.
 - Existing refresh tokens can be revoked.
 - Existing authentication cookies can be cleared.
 
-This prevents inactive Intern users from continuing to use an existing session.
+This prevents inactive or incomplete Intern accounts from continuing to use authenticated sessions.
 
 ---
 
@@ -466,6 +529,8 @@ Refresh token path:
 
 Using different paths limits where each cookie is sent.
 
+Legacy token cookies with the root `/` path can also be removed during authentication cookie cleanup.
+
 ---
 
 ## Development and Production Cookies
@@ -508,6 +573,8 @@ Authentication determines who the user is.
 
 Authorization determines what the user is allowed to do.
 
+API-level authorization attributes are preserved by the current role-handling refactor.
+
 ---
 
 ## Authentication and Business Rules
@@ -518,8 +585,8 @@ The backend also applies service-level validation.
 
 Examples include:
 
-- Checking whether an Intern profile belongs to the authenticated user
 - Preventing inactive Intern accounts from continuing sessions
+- Requiring an active Intern profile for Intern authentication
 - Restricting task operations based on roles
 - Restricting access to records
 - Validating task status transitions
@@ -545,6 +612,77 @@ Common authentication-related error scenarios include:
 - Forbidden role-based operation
 
 The API returns appropriate HTTP responses depending on the operation and error type.
+
+Business result mapping is handled centrally through `ServiceResultMapper`.
+
+Authentication endpoint response metadata is documented through `InternTrackApiConventions`.
+
+---
+
+## Authentication Response Conventions
+
+Authentication controllers use centralized API response conventions.
+
+Instead of repeating multiple `ProducesResponseType` attributes on every action, response metadata is defined in:
+
+    InternTrackApiConventions
+
+Authentication conventions include documented responses for:
+
+- Register
+- Login
+- Current user
+- Avatar update
+- Profile update
+- Password change
+- Refresh
+- Logout
+
+Rate-limited authentication endpoints continue to document:
+
+    HTTP 429 Too Many Requests
+
+The convention structure affects Swagger/OpenAPI metadata only.
+
+Runtime response mapping remains handled by the controller and `ServiceResultMapper`.
+
+---
+
+## Authentication Logging
+
+Authentication-related application events are recorded through the project-owned logging abstraction.
+
+The Business layer uses:
+
+- `IAppLogger`
+
+The Infrastructure layer provides:
+
+- `ConsoleAppLogger`
+
+Application services do not depend on `ILogger<T>`.
+
+Authentication-related logged events can include:
+
+- Login success
+- Login failure
+- Refresh validation failures
+- Inactive account attempts
+- Password changes
+- Important authentication business-rule failures
+
+Sensitive authentication values are not logged.
+
+Examples include:
+
+- Passwords
+- Password hashes
+- Access tokens
+- Refresh tokens
+- JWT secret values
+- Request contents
+
+Unexpected exceptions are logged centrally by the exception-handling middleware.
 
 ---
 
@@ -584,13 +722,17 @@ The authentication system currently includes:
 - Refresh token revocation
 - HttpOnly cookies
 - Secure cookies outside development
+- Restricted cookie paths
+- Centralized role interpretation
 - Role-based authorization
 - Business-level permission checks
-- Inactive account validation
+- Intern profile validation
 - Password hashing
 - Session invalidation after password changes
+- Authentication event logging
 - Rate limiting
 - Configurable token lifetimes
+- Centralized API response metadata
 
 ---
 
@@ -604,6 +746,9 @@ The complete authentication lifecycle can be summarized as:
     Login
         |
         v
+    Role and account validation
+        |
+        v
     Access Token + Refresh Token
         |
         v
@@ -614,6 +759,9 @@ The complete authentication lifecycle can be summarized as:
         |
         v
     Refresh
+        |
+        v
+    User and Intern profile validation
         |
         v
     Token Rotation
@@ -632,6 +780,35 @@ The complete authentication lifecycle can be summarized as:
 
 ---
 
+## Testing
+
+Authentication and role behavior are covered by automated tests.
+
+Current related test coverage includes scenarios such as:
+
+- Valid login
+- Invalid password
+- Missing users
+- Admin users without Intern profiles
+- HR users without Intern profiles
+- Active Intern users
+- Inactive Intern users
+- Intern users with missing profiles
+- Role casing behavior
+- Refresh token validation
+- Refresh token rotation
+- Refresh token revocation
+- Password changes
+- Logout behavior
+- Authentication logging
+
+The complete backend test suite currently passes:
+
+    238 tests passed
+    0 tests failed
+
+---
+
 ## Documentation Status
 
 The main authentication and session-management behavior of InternTrack is documented in this file.
@@ -645,11 +822,14 @@ The documented areas include:
 - Token rotation
 - Token revocation
 - HttpOnly cookies
-- Inactive Intern handling
+- Intern profile validation
+- Centralized role handling
 - Password changes
 - Profile updates
 - Avatar updates
 - Logout
 - Role-based authorization
+- Authentication logging
+- API response conventions
 - Rate limiting
 - Authentication security

@@ -1,11 +1,11 @@
 using InternTrack.Core.Constants;
+using InternTrack.Core.Helpers;
 using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
 using InternTrack.DataAccess.Interfaces;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -21,7 +21,7 @@ public class AuthService : IAuthService
 
     private readonly IConfiguration _configuration;
 
-    private readonly ILogger<AuthService>? _logger;
+    private readonly IAppLogger _logger;
 
     public AuthService(
         IUserRepository userRepository,
@@ -29,7 +29,7 @@ public class AuthService : IAuthService
         ITokenService tokenService,
         IRefreshTokenRepository refreshTokenRepository,
         IConfiguration configuration,
-        ILogger<AuthService>? logger = null)
+        IAppLogger logger)
     {
         _userRepository = userRepository;
         _departmentRepository = departmentRepository;
@@ -39,20 +39,13 @@ public class AuthService : IAuthService
         _logger = logger;
     }
 
-    private static bool IsInactiveIntern(User user)
-    {
-        return user.Role.Equals(
-            Roles.Intern,
-            StringComparison.OrdinalIgnoreCase) && (user.Intern == null || !user.Intern.IsActive);
-    }
-
     public async Task<ServiceResult> RegisterAsync(RegisterDto dto)
     {
         var department = await _departmentRepository.GetByIdAsync(dto.DepartmentId);
 
         if (department == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Registration rejected because department was not found. DepartmentId: {DepartmentId}",
                 dto.DepartmentId);
 
@@ -63,7 +56,7 @@ public class AuthService : IAuthService
 
         if (emailExists)
         {
-            _logger?.LogWarning("Registration rejected because email is already registered.");
+            _logger.LogWarning("Registration rejected because email is already registered.");
 
             return ServiceResult.Conflict("Bu email adresi zaten kayıtlı.");
         }
@@ -89,7 +82,7 @@ public class AuthService : IAuthService
 
         user.Intern = intern;
         await _userRepository.AddAsync(user);
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Intern account registered successfully. UserId: {UserId}, DepartmentId: {DepartmentId}",
             user.Id,
             dto.DepartmentId);
@@ -103,7 +96,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            _logger?.LogWarning("Login rejected because credentials are invalid.");
+            _logger.LogWarning("Login rejected because credentials are invalid.");
 
             return ServiceResult<LoginResponseDto>.ValidationError("Email veya şifre hatalı.");
         }
@@ -112,14 +105,18 @@ public class AuthService : IAuthService
 
         if (!passwordIsCorrect)
         {
-            _logger?.LogWarning("Login rejected because credentials are invalid. UserId: {UserId}", user.Id);
+            _logger.LogWarning("Login rejected because credentials are invalid. UserId: {UserId}", user.Id);
 
             return ServiceResult<LoginResponseDto>.ValidationError("Email veya şifre hatalı.");
         }
 
-        if (IsInactiveIntern(user))
+        var requiresInternProfile = RoleHelper.IsInternAccountRole(user.Role);
+        var internProfileIsMissing = user.Intern is null;
+        var internProfileIsInactive = user.Intern is { IsActive: false };
+
+        if (requiresInternProfile && (internProfileIsMissing || internProfileIsInactive))
         {
-            _logger?.LogWarning("Login rejected because intern account is inactive. UserId: {UserId}", user.Id);
+            _logger.LogWarning("Login rejected because intern account is inactive. UserId: {UserId}", user.Id);
 
             return ServiceResult<LoginResponseDto>.ValidationError("Hesabınız pasif durumda. Giriş yapamazsınız.");
         }
@@ -133,7 +130,7 @@ public class AuthService : IAuthService
         await _refreshTokenRepository.AddAsync(refreshToken);
         var response = CreateLoginResponse(user, accessToken, refreshTokenValue);
 
-        _logger?.LogInformation("User logged in successfully. UserId: {UserId}, Role: {Role}", user.Id, user.Role);
+        _logger.LogInformation("User logged in successfully. UserId: {UserId}, Role: {Role}", user.Id, user.Role);
 
         return ServiceResult<LoginResponseDto>.Ok(response);
     }
@@ -144,14 +141,14 @@ public class AuthService : IAuthService
 
         if (storedRefreshToken == null)
         {
-            _logger?.LogWarning("Token refresh rejected because refresh token was not found.");
+            _logger.LogWarning("Token refresh rejected because refresh token was not found.");
 
             return ServiceResult<LoginResponseDto>.ValidationError("Refresh token geçersiz.");
         }
 
         if (storedRefreshToken.RevokedAt != null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Token refresh rejected because refresh token was revoked. UserId: {UserId}",
                 storedRefreshToken.UserId);
 
@@ -160,7 +157,7 @@ public class AuthService : IAuthService
 
         if (storedRefreshToken.ExpiresAt <= DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Token refresh rejected because refresh token expired. UserId: {UserId}",
                 storedRefreshToken.UserId);
 
@@ -171,17 +168,21 @@ public class AuthService : IAuthService
 
         if (currentUser == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Token refresh rejected because associated user was not found. UserId: {UserId}",
                 storedRefreshToken.UserId);
 
             return ServiceResult<LoginResponseDto>.ValidationError("Refresh token kullanıcısı bulunamadı.");
         }
 
-        if (IsInactiveIntern(currentUser))
+        var requiresInternProfile = RoleHelper.IsInternAccountRole(currentUser.Role);
+        var internProfileIsMissing = currentUser.Intern is null;
+        var internProfileIsInactive = currentUser.Intern is { IsActive: false };
+
+        if (requiresInternProfile && (internProfileIsMissing || internProfileIsInactive))
         {
             await _refreshTokenRepository.RevokeAllByUserIdAsync(currentUser.Id);
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Token refresh rejected because intern account is inactive. UserId: {UserId}",
                 currentUser.Id);
 
@@ -199,7 +200,7 @@ public class AuthService : IAuthService
         await _refreshTokenRepository.AddAsync(newRefreshToken);
         var response = CreateLoginResponse(currentUser, newAccessToken, newRefreshTokenValue);
 
-        _logger?.LogInformation("Authentication tokens refreshed successfully. UserId: {UserId}", currentUser.Id);
+        _logger.LogInformation("Authentication tokens refreshed successfully. UserId: {UserId}", currentUser.Id);
 
         return ServiceResult<LoginResponseDto>.Ok(response);
     }
@@ -210,14 +211,14 @@ public class AuthService : IAuthService
 
         if (storedRefreshToken == null)
         {
-            _logger?.LogWarning("Logout request rejected because refresh token was not found.");
+            _logger.LogWarning("Logout request rejected because refresh token was not found.");
 
             return ServiceResult.ValidationError("Refresh token geçersiz.");
         }
 
         if (storedRefreshToken.RevokedAt != null)
         {
-            _logger?.LogInformation(
+            _logger.LogInformation(
                 "Logout requested for an already revoked session. UserId: {UserId}",
                 storedRefreshToken.UserId);
 
@@ -226,7 +227,7 @@ public class AuthService : IAuthService
 
         storedRefreshToken.RevokedAt = DateTime.UtcNow;
         await _refreshTokenRepository.UpdateAsync(storedRefreshToken);
-        _logger?.LogInformation("User logged out successfully. UserId: {UserId}", storedRefreshToken.UserId);
+        _logger.LogInformation("User logged out successfully. UserId: {UserId}", storedRefreshToken.UserId);
 
         return ServiceResult.Ok("Çıkış başarılı.");
     }
@@ -237,14 +238,14 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            _logger?.LogWarning("Avatar update rejected because user was not found. UserId: {UserId}", userId);
+            _logger.LogWarning("Avatar update rejected because user was not found. UserId: {UserId}", userId);
 
             return ServiceResult.ValidationError("Kullanıcı bulunamadı.");
         }
 
         user.Avatar = string.IsNullOrWhiteSpace(avatar) ? null : avatar.Trim();
         await _userRepository.UpdateAsync(user);
-        _logger?.LogInformation("User avatar updated successfully. UserId: {UserId}", userId);
+        _logger.LogInformation("User avatar updated successfully. UserId: {UserId}", userId);
 
         return ServiceResult.Ok("Avatar başarıyla güncellendi.");
     }
@@ -255,7 +256,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            _logger?.LogWarning("Password change rejected because user was not found. UserId: {UserId}", userId);
+            _logger.LogWarning("Password change rejected because user was not found. UserId: {UserId}", userId);
 
             return ServiceResult.ValidationError("Kullanıcı bulunamadı.");
         }
@@ -264,7 +265,7 @@ public class AuthService : IAuthService
 
         if (!currentPasswordIsCorrect)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Password change rejected because current password is incorrect. UserId: {UserId}",
                 userId);
 
@@ -275,7 +276,7 @@ public class AuthService : IAuthService
 
         if (newPasswordIsSameAsCurrent)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Password change rejected because new password matches current password. UserId: {UserId}",
                 userId);
 
@@ -286,7 +287,7 @@ public class AuthService : IAuthService
         user.MustChangePassword = false;
         await _userRepository.UpdateAsync(user);
         await _refreshTokenRepository.RevokeAllByUserIdAsync(userId);
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Password changed successfully and active refresh tokens were revoked. UserId: {UserId}",
             userId);
 
@@ -299,7 +300,7 @@ public class AuthService : IAuthService
 
         if (user == null)
         {
-            _logger?.LogWarning("Profile update rejected because user was not found. UserId: {UserId}", userId);
+            _logger.LogWarning("Profile update rejected because user was not found. UserId: {UserId}", userId);
 
             return ServiceResult.ValidationError("Kullanıcı bulunamadı.");
         }
@@ -313,7 +314,7 @@ public class AuthService : IAuthService
 
             if (emailExists)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Profile update rejected because email is already used by another user. UserId: {UserId}",
                     userId);
 
@@ -333,7 +334,7 @@ public class AuthService : IAuthService
         }
 
         await _userRepository.UpdateAsync(user);
-        _logger?.LogInformation("User profile updated successfully. UserId: {UserId}", userId);
+        _logger.LogInformation("User profile updated successfully. UserId: {UserId}", userId);
 
         return ServiceResult.Ok("Profil başarıyla güncellendi.");
     }

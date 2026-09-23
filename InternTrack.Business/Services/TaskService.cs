@@ -1,10 +1,10 @@
+using InternTrack.Core.Helpers;
 using InternTrack.Core.Constants;
 using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
-using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -12,12 +12,12 @@ public class TaskService : ITaskService
 {
     private readonly ITaskRepository _taskRepository;
     private readonly IInternRepository _internRepository;
-    private readonly ILogger<TaskService>? _logger;
+    private readonly IAppLogger _logger;
 
     public TaskService(
         ITaskRepository taskRepository,
         IInternRepository internRepository,
-        ILogger<TaskService>? logger = null)
+        IAppLogger logger)
     {
         _taskRepository = taskRepository;
         _internRepository = internRepository;
@@ -52,7 +52,7 @@ public class TaskService : ITaskService
         int userId,
         string role)
     {
-        if (role == Roles.Admin || role == Roles.HR)
+        if (RoleHelper.IsAdminClaim(role) || RoleHelper.IsHrClaim(role))
         {
             var allTasks =
                 await _taskRepository.GetAllAsync();
@@ -67,7 +67,7 @@ public class TaskService : ITaskService
 
         if (intern == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task list could not be retrieved because intern profile was not found. UserId: {UserId}",
                 userId);
 
@@ -105,7 +105,7 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task was not found. TaskId: {TaskId}, UserId: {UserId}",
                 id,
                 userId);
@@ -114,7 +114,7 @@ public class TaskService : ITaskService
                 "Görev bulunamadı.");
         }
 
-        if (role == Roles.Intern)
+        if (RoleHelper.IsInternClaim(role))
         {
             var intern =
                 await _internRepository
@@ -122,7 +122,7 @@ public class TaskService : ITaskService
 
             if (intern == null)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Task access failed because intern profile was not found. TaskId: {TaskId}, UserId: {UserId}",
                     id,
                     userId);
@@ -133,7 +133,7 @@ public class TaskService : ITaskService
 
             if (task.InternId != intern.Id)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Unauthorized task access attempt. TaskId: {TaskId}, UserId: {UserId}, InternId: {InternId}",
                     id,
                     userId,
@@ -160,7 +160,7 @@ public class TaskService : ITaskService
         if (dueDateUtc.HasValue &&
             dueDateUtc.Value < DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task creation rejected because due date is in the past. UserId: {UserId}, Role: {Role}",
                 userId,
                 role);
@@ -169,7 +169,7 @@ public class TaskService : ITaskService
                 "Son teslim tarihi geçmiş bir tarih ve saat olamaz.");
         }
 
-        if (role == Roles.Intern)
+        if (RoleHelper.IsInternClaim(role))
         {
             var currentIntern =
                 await _internRepository
@@ -177,7 +177,7 @@ public class TaskService : ITaskService
 
             if (currentIntern == null)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Task creation failed because intern profile was not found. UserId: {UserId}",
                     userId);
 
@@ -188,8 +188,8 @@ public class TaskService : ITaskService
             internId = currentIntern.Id;
         }
         else if (
-            role == Roles.Admin ||
-            role == Roles.HR)
+            RoleHelper.IsAdminClaim(role) ||
+            RoleHelper.IsHrClaim(role))
         {
             var selectedIntern =
                 await _internRepository
@@ -197,7 +197,7 @@ public class TaskService : ITaskService
 
             if (selectedIntern == null)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Task creation rejected because selected intern was not found. InternId: {InternId}, UserId: {UserId}",
                     dto.InternId,
                     userId);
@@ -210,7 +210,7 @@ public class TaskService : ITaskService
         }
         else
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Unauthorized task creation attempt. UserId: {UserId}, Role: {Role}",
                 userId,
                 role);
@@ -230,8 +230,8 @@ public class TaskService : ITaskService
             CreatedByUserId = userId,
 
             CanInternDeleteWhenCompleted =
-                role == Roles.Admin ||
-                role == Roles.HR
+                RoleHelper.IsAdminClaim(role) ||
+                RoleHelper.IsHrClaim(role)
                     ? dto.CanInternDeleteWhenCompleted
                     : false,
 
@@ -243,7 +243,7 @@ public class TaskService : ITaskService
 
         await _taskRepository.AddAsync(task);
 
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Task created successfully. TaskId: {TaskId}, InternId: {InternId}, CreatedByUserId: {UserId}, Role: {Role}",
             task.Id,
             internId,
@@ -261,7 +261,7 @@ public class TaskService : ITaskService
         string role)
     {
         var task =
-            role == Roles.Admin
+            RoleHelper.IsAdminClaim(role)
                 ? await _taskRepository
                     .GetByIdIncludingInactiveAsync(id)
                 : await _taskRepository
@@ -269,7 +269,7 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task update failed because task was not found. TaskId: {TaskId}, UserId: {UserId}",
                 id,
                 userId);
@@ -278,7 +278,7 @@ public class TaskService : ITaskService
                 "Görev bulunamadı.");
         }
 
-        if (role == Roles.Intern)
+        if (RoleHelper.IsInternClaim(role))
         {
             return await UpdateForInternAsync(
                 task,
@@ -295,7 +295,7 @@ public class TaskService : ITaskService
             role);
     }
 
-    public async Task<ServiceResult> DeleteAsync(
+    public async Task<ServiceResult> DeactivateTaskAsync(
         int id,
         int userId,
         string role)
@@ -305,7 +305,7 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task deletion failed because task was not found. TaskId: {TaskId}, UserId: {UserId}",
                 id,
                 userId);
@@ -314,7 +314,7 @@ public class TaskService : ITaskService
                 "Görev bulunamadı.");
         }
 
-        if (role == Roles.Intern)
+        if (RoleHelper.IsInternClaim(role))
         {
             var intern =
                 await _internRepository
@@ -322,7 +322,7 @@ public class TaskService : ITaskService
 
             if (intern == null)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Task deletion failed because intern profile was not found. TaskId: {TaskId}, UserId: {UserId}",
                     id,
                     userId);
@@ -333,7 +333,7 @@ public class TaskService : ITaskService
 
             if (task.InternId != intern.Id)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Unauthorized task deletion attempt. TaskId: {TaskId}, UserId: {UserId}, InternId: {InternId}",
                     id,
                     userId,
@@ -349,9 +349,9 @@ public class TaskService : ITaskService
             if (createdByCurrentIntern)
             {
                 await _taskRepository
-                    .DeleteAsync(task);
+                    .DeactivateTaskAsync(task);
 
-                _logger?.LogInformation(
+                _logger.LogInformation(
                     "Task soft deleted by its creator intern. TaskId: {TaskId}, UserId: {UserId}",
                     id,
                     userId);
@@ -366,7 +366,7 @@ public class TaskService : ITaskService
             if (!isCompleted ||
                 !task.CanInternDeleteWhenCompleted)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Intern task deletion rejected by business rule. TaskId: {TaskId}, UserId: {UserId}, Status: {Status}, CanInternDeleteWhenCompleted: {CanDelete}",
                     id,
                     userId,
@@ -377,9 +377,9 @@ public class TaskService : ITaskService
                     "Bu görevi silme yetkiniz yok.");
             }
         }
-        else if (role != Roles.Admin)
+        else if (!RoleHelper.IsAdminClaim(role))
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Unauthorized task deletion attempt. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
                 id,
                 userId,
@@ -389,9 +389,9 @@ public class TaskService : ITaskService
                 "Bu işlem için yetkiniz yok.");
         }
 
-        await _taskRepository.DeleteAsync(task);
+        await _taskRepository.DeactivateTaskAsync(task);
 
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Task soft deleted successfully. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
             id,
             userId,
@@ -401,7 +401,7 @@ public class TaskService : ITaskService
             "Görev silindi.");
     }
 
-    public async Task<ServiceResult> RestoreAsync(
+    public async Task<ServiceResult> ReactivateTaskAsync(
         int id)
     {
         var task =
@@ -410,7 +410,7 @@ public class TaskService : ITaskService
 
         if (task == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task restore failed because task was not found. TaskId: {TaskId}",
                 id);
 
@@ -420,7 +420,7 @@ public class TaskService : ITaskService
 
         if (task.IsActive)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task restore rejected because task is already active. TaskId: {TaskId}",
                 id);
 
@@ -434,7 +434,7 @@ public class TaskService : ITaskService
 
         if (intern == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task restore rejected because linked intern is inactive or unavailable. TaskId: {TaskId}, InternId: {InternId}",
                 task.Id,
                 task.InternId);
@@ -443,9 +443,9 @@ public class TaskService : ITaskService
                 "Görevin atandığı stajyer pasif veya bulunamadı. Önce stajyeri aktif hale getirin.");
         }
 
-        await _taskRepository.RestoreAsync(task);
+        await _taskRepository.ReactivateTaskAsync(task);
 
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Task restored successfully. TaskId: {TaskId}, InternId: {InternId}",
             task.Id,
             task.InternId);
@@ -467,7 +467,7 @@ public class TaskService : ITaskService
 
         if (intern == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task update failed because intern profile was not found. TaskId: {TaskId}, UserId: {UserId}",
                 id,
                 userId);
@@ -478,7 +478,7 @@ public class TaskService : ITaskService
 
         if (task.InternId != intern.Id)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Unauthorized task update attempt. TaskId: {TaskId}, UserId: {UserId}, InternId: {InternId}",
                 id,
                 userId,
@@ -495,7 +495,7 @@ public class TaskService : ITaskService
             currentTaskDueDateUtc.Value <
             DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Intern task update rejected because task is overdue. TaskId: {TaskId}, UserId: {UserId}, DueDate: {DueDate}",
                 id,
                 userId,
@@ -532,7 +532,7 @@ public class TaskService : ITaskService
             effectiveDueDateUtc.Value <
             DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task status update rejected because task is overdue. TaskId: {TaskId}, UserId: {UserId}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
                 id,
                 userId,
@@ -584,7 +584,7 @@ public class TaskService : ITaskService
 
         await _taskRepository.UpdateAsync(task);
 
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Task updated successfully by intern. TaskId: {TaskId}, UserId: {UserId}, Status: {Status}",
             id,
             userId,
@@ -605,7 +605,7 @@ public class TaskService : ITaskService
             newStatus != TaskStatuses.ToDo &&
             newStatus != TaskStatuses.InProgress)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Invalid task status transition. TaskId: {TaskId}, UserId: {UserId}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
                 id,
                 userId,
@@ -623,7 +623,7 @@ public class TaskService : ITaskService
             newStatus !=
                 TaskStatuses.Done)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Invalid task status transition. TaskId: {TaskId}, UserId: {UserId}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
                 id,
                 userId,
@@ -637,7 +637,7 @@ public class TaskService : ITaskService
         if (task.Status == TaskStatuses.Done &&
             newStatus != TaskStatuses.Done)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Completed task reopen attempt rejected. TaskId: {TaskId}, UserId: {UserId}, NewStatus: {NewStatus}",
                 id,
                 userId,
@@ -674,7 +674,7 @@ public class TaskService : ITaskService
             newDueDateUtc.Value <
             DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task update rejected because due date is in the past. TaskId: {TaskId}, UserId: {UserId}",
                 id,
                 userId);
@@ -701,7 +701,7 @@ public class TaskService : ITaskService
             string role)
     {
         var desiredIsActive =
-            role == Roles.Admin &&
+            RoleHelper.IsAdminClaim(role) &&
             dto.IsActive.HasValue
                 ? dto.IsActive.Value
                 : task.IsActive;
@@ -721,7 +721,7 @@ public class TaskService : ITaskService
 
             if (selectedIntern == null)
             {
-                _logger?.LogWarning(
+                _logger.LogWarning(
                     "Task update rejected because selected intern was not found or inactive. TaskId: {TaskId}, InternId: {InternId}, UserId: {UserId}",
                     id,
                     dto.InternId,
@@ -743,10 +743,10 @@ public class TaskService : ITaskService
             int userId,
             string role)
     {
-        if (role != Roles.Admin &&
-            role != Roles.HR)
+        if (!RoleHelper.IsAdminClaim(role) &&
+            !RoleHelper.IsHrClaim(role))
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Unauthorized task update attempt. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
                 id,
                 userId,
@@ -780,13 +780,13 @@ public class TaskService : ITaskService
                 currentDueDateUtc,
                 requestedDueDateUtc);
 
-        if (role == Roles.HR &&
+        if (RoleHelper.IsHrClaim(role) &&
             dueDateChanged &&
             requestedDueDateUtc.HasValue &&
             requestedDueDateUtc.Value <
             DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task update rejected because due date is in the past. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}",
                 id,
                 userId,
@@ -820,14 +820,14 @@ public class TaskService : ITaskService
             return transitionError;
         }
 
-        if (role == Roles.HR &&
+        if (RoleHelper.IsHrClaim(role) &&
             statusChanged &&
             movingToActiveOrDone &&
             requestedDueDateUtc.HasValue &&
             requestedDueDateUtc.Value <
             DateTime.UtcNow)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Task status update rejected because task is overdue. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}, OldStatus: {OldStatus}, NewStatus: {NewStatus}",
                 id,
                 userId,
@@ -872,7 +872,7 @@ public class TaskService : ITaskService
         task.CanInternDeleteWhenCompleted =
             dto.CanInternDeleteWhenCompleted;
 
-        if (role == Roles.Admin &&
+        if (RoleHelper.IsAdminClaim(role) &&
             dto.IsActive.HasValue)
         {
             task.IsActive =
@@ -881,7 +881,7 @@ public class TaskService : ITaskService
 
         await _taskRepository.UpdateAsync(task);
 
-        _logger?.LogInformation(
+        _logger.LogInformation(
             "Task updated successfully. TaskId: {TaskId}, UserId: {UserId}, Role: {Role}, InternId: {InternId}, Status: {Status}",
             id,
             userId,

@@ -1,3 +1,4 @@
+using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -19,18 +20,26 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ApiConventionMethod(
+        typeof(InternTrackApiConventions),
+        nameof(InternTrackApiConventions.DashboardStats))]
     public async Task<IActionResult> GetStats()
     {
         if (!CurrentUserHelper.TryGetUserInfo(User, out var userId, out var role))
         {
-            return Unauthorized(new { message = "Kullanıcı bilgileri doğrulanamadı." });
+            return Unauthorized(new
+            {
+                message = "Kullanıcı bilgileri doğrulanamadı."
+            });
         }
 
-        var result = await _dashboardService.GetStatsAsync(userId, role);
+        var result =
+            await _dashboardService.GetStatsAsync(
+                userId,
+                role);
 
-        return ServiceResultMapper.ToActionResult(this, result);
+        return ServiceResultMapper.ToActionResult(
+            this,
+            result);
     }
 }

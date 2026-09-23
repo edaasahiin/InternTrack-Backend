@@ -3,7 +3,7 @@ using InternTrack.Core.DTOs;
 
 namespace InternTrack.Business.Interfaces;
 
-public interface IDashboardService
+public interface IDashboardService : IScopedService
 {
     Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(int userId, string role);
 }

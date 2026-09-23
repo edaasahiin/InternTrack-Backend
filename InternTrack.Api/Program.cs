@@ -1,12 +1,10 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using InternTrack.Api.Extensions;
 using InternTrack.Api.Middleware;
 using InternTrack.Business.Interfaces;
-using InternTrack.Business.Services;
-using InternTrack.DataAccess;
 using InternTrack.DataAccess.Context;
-using InternTrack.DataAccess.Interfaces;
-using InternTrack.DataAccess.Repositories;
+using InternTrack.Infrastructure.Logging;
 using InternTrack.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -48,29 +46,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(connectionString);
 });
 
-// Repository Dependency Injection
-builder.Services.AddScoped<IInternRepository, InternRepository>();
-
-builder.Services.AddScoped<ITaskRepository, TaskRepository>();
-
-builder.Services.AddScoped<IDepartmentRepository, DepartmentRepository>();
-
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-
-// Service Dependency Injection
-builder.Services.AddScoped<IInternService, InternService>();
-
-builder.Services.AddScoped<ITaskService, TaskService>();
-
-builder.Services.AddScoped<IDepartmentService, DepartmentService>();
-
-builder.Services.AddScoped<IAuthService, AuthService>();
-
-builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddInternTrackServices();
 
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
+builder.Services.AddScoped<IAppLogger, ConsoleAppLogger>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"];
@@ -209,13 +188,6 @@ app.UseMiddleware<TokenCookieMiddleware>();
 app.UseAuthentication();
 
 app.UseAuthorization();
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    await DbSeeder.SeedAsync(dbContext);
-}
 
 app.MapControllers();
 

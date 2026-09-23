@@ -14,6 +14,10 @@ The API uses role-based authorization with three roles:
 
 Authentication is handled using JWT access tokens and refresh tokens stored in HttpOnly cookies.
 
+Repeated Swagger/OpenAPI response metadata is centralized through `InternTrackApiConventions`.
+
+Runtime business result mapping is handled through `ServiceResultMapper`.
+
 ---
 
 ## Authentication Endpoints
@@ -78,7 +82,9 @@ Returned information includes:
 - Role
 - MustChangePassword
 
-If an Intern account is inactive, authentication cookies are cleared and the request is rejected.
+If the authenticated user has the Intern role, the related Intern profile must exist and must be active.
+
+If the Intern profile is missing or inactive, authentication cookies can be cleared and the request is rejected.
 
 Possible responses:
 
@@ -155,6 +161,8 @@ When the refresh operation succeeds:
 - A new refresh token is created.
 - New authentication cookies are written.
 
+The related user and Intern profile state are validated before the session is renewed.
+
 Rate limiting is enabled for this endpoint.
 
 Possible responses:
@@ -173,7 +181,9 @@ Possible responses:
 
 Logs the user out of the application.
 
-If a refresh token is available, it is revoked. Authentication cookies are then cleared.
+If a refresh token is available, it is revoked.
+
+Authentication cookies are then cleared.
 
 Possible responses:
 
@@ -217,7 +227,7 @@ Possible responses:
 
 ### Get All Departments
 
-**Endpoint:** `GET /api/departments/all`
+**Endpoint:** `GET /api/departments/get-all`
 
 **Access:** Admin
 
@@ -233,7 +243,7 @@ Possible responses:
 
 ### Get Department by ID
 
-**Endpoint:** `GET /api/departments/{id}`
+**Endpoint:** `GET /api/departments/get-by-id/{id}`
 
 **Access:** Authenticated users
 
@@ -255,6 +265,14 @@ Possible responses:
 
 Creates a new department.
 
+Duplicate Department names are rejected.
+
+The duplicate check:
+
+- Includes inactive departments
+- Ignores leading and trailing whitespace
+- Normalizes case
+
 Possible responses:
 
 - `201 Created`
@@ -267,11 +285,13 @@ Possible responses:
 
 ### Update Department
 
-**Endpoint:** `PUT /api/departments/{id}`
+**Endpoint:** `PUT /api/departments/update-by-id/{id}`
 
 **Access:** Admin, HR
 
 Updates an existing department.
+
+When checking for duplicate names, the current Department is excluded from its own comparison.
 
 Possible responses:
 
@@ -284,13 +304,25 @@ Possible responses:
 
 ---
 
-### Delete Department
+### Deactivate Department
 
 **Endpoint:** `DELETE /api/departments/{id}`
 
 **Access:** Admin
 
-Soft-deletes a department.
+Soft-deactivates a department.
+
+Internal action:
+
+    DeactivateDepartment
+
+Service method:
+
+    DeactivateDepartmentAsync
+
+The record remains stored with:
+
+    IsActive = false
 
 Possible responses:
 
@@ -302,13 +334,23 @@ Possible responses:
 
 ---
 
-### Restore Department
+### Reactivate Department
 
 **Endpoint:** `PATCH /api/departments/{id}/restore`
 
 **Access:** Admin
 
-Restores an inactive department.
+Reactivates an inactive Department.
+
+Internal action:
+
+    ReactivateDepartment
+
+Service method:
+
+    ReactivateDepartmentAsync
+
+The external `/restore` route remains unchanged.
 
 Possible responses:
 
@@ -362,7 +404,7 @@ Possible responses:
 
 Returns an Intern record according to role-based authorization rules.
 
-Intern users can only access records permitted by the business rules.
+Intern users can only access records permitted by the Business rules.
 
 Possible responses:
 
@@ -379,7 +421,15 @@ Possible responses:
 
 **Access:** Admin, HR
 
-Creates a new Intern record.
+Creates a new Intern record and its linked User account.
+
+Internal action:
+
+    CreateInternWithAccount
+
+Service method:
+
+    CreateInternWithAccountAsync
 
 Possible responses:
 
@@ -410,13 +460,25 @@ Possible responses:
 
 ---
 
-### Delete Intern
+### Deactivate Intern
 
 **Endpoint:** `DELETE /api/interns/{id}`
 
 **Access:** Admin
 
-Soft-deletes an Intern record.
+Soft-deactivates an Intern record.
+
+Internal action:
+
+    DeactivateIntern
+
+Service method:
+
+    DeactivateInternAsync
+
+The record remains stored with:
+
+    IsActive = false
 
 Possible responses:
 
@@ -427,19 +489,29 @@ Possible responses:
 
 ---
 
-### Restore Intern
+### Reactivate Intern
 
 **Endpoint:** `PATCH /api/interns/{id}/restore`
 
 **Access:** Admin
 
-Restores an inactive Intern.
+Reactivates an inactive Intern.
 
-Restore operations are subject to related business rules.
+Internal action:
+
+    ReactivateIntern
+
+Service method:
+
+    ReactivateInternAsync
+
+The external `/restore` route remains unchanged.
+
+Reactivation operations are subject to related Business rules.
 
 For example:
 
-- The related Department must be active before the Intern can be restored.
+- The related Department must be active before the Intern can be reactivated.
 
 Possible responses:
 
@@ -508,7 +580,7 @@ Possible responses:
 
 **Access:** Authenticated users
 
-Creates a task according to role-based business rules.
+Creates a task according to role-based Business rules.
 
 The authenticated user's ID and role are used when validating the operation.
 
@@ -528,7 +600,7 @@ Possible responses:
 
 **Access:** Authenticated users
 
-Updates a task according to business and authorization rules.
+Updates a task according to Business and authorization rules.
 
 Validation may include:
 
@@ -548,13 +620,25 @@ Possible responses:
 
 ---
 
-### Delete Task
+### Deactivate Task
 
 **Endpoint:** `DELETE /api/tasks/{id}`
 
 **Access:** Authenticated users
 
-Deletes a task according to role-based authorization rules.
+Deactivates a task according to role-based authorization rules.
+
+Internal action:
+
+    DeactivateTask
+
+Service method:
+
+    DeactivateTaskAsync
+
+The record remains stored with:
+
+    IsActive = false
 
 Possible responses:
 
@@ -565,19 +649,29 @@ Possible responses:
 
 ---
 
-### Restore Task
+### Reactivate Task
 
 **Endpoint:** `PATCH /api/tasks/{id}/restore`
 
 **Access:** Admin
 
-Restores an inactive task.
+Reactivates an inactive task.
 
-Restore operations are subject to related business rules.
+Internal action:
+
+    ReactivateTask
+
+Service method:
+
+    ReactivateTaskAsync
+
+The external `/restore` route remains unchanged.
+
+Reactivation operations are subject to related Business rules.
 
 For example:
 
-- The assigned Intern must be active before the task can be restored.
+- The assigned Intern must be active before the task can be reactivated.
 
 Possible responses:
 
@@ -586,6 +680,56 @@ Possible responses:
 - `403 Forbidden`
 - `404 Not Found`
 - `409 Conflict`
+
+---
+
+## API Response Conventions
+
+Repeated response metadata is centralized through:
+
+    InternTrackApiConventions
+
+Controller actions reference convention methods through:
+
+    ApiConventionMethod
+
+This reduces repeated `ProducesResponseType` declarations while preserving Swagger/OpenAPI response documentation.
+
+Examples of centralized response metadata include:
+
+- Authentication responses
+- Dashboard responses
+- Department responses
+- Intern responses
+- Task responses
+- Create responses
+- Update responses
+- Deactivation responses
+- Reactivation responses
+
+Runtime HTTP response behavior is not handled by the convention class.
+
+Business results are mapped through:
+
+    ServiceResultMapper
+
+Examples:
+
+    ValidationError -> 400 Bad Request
+
+    NotFound -> 404 Not Found
+
+    Forbidden -> 403 Forbidden
+
+    Conflict -> 409 Conflict
+
+Successful create operations can return:
+
+    201 Created
+
+Successful deactivation operations can return:
+
+    204 No Content
 
 ---
 
@@ -619,6 +763,30 @@ The expiration time is configured using:
 
 ---
 
+## Role Handling
+
+Role interpretation is centralized through `RoleHelper`.
+
+Role-related string comparisons are not scattered through Business services.
+
+The helper includes clearly named operations for:
+
+- Admin claim handling
+- HR claim handling
+- Intern claim handling
+- Authentication-specific Intern account recognition
+
+Authentication additionally distinguishes whether an Intern profile:
+
+- Is required
+- Is missing
+- Is inactive
+- Is active
+
+Non-Intern users do not require an Intern profile.
+
+---
+
 ## Rate Limiting
 
 Rate limiting is enabled for authentication-related endpoints.
@@ -648,22 +816,22 @@ When a configured request limit is exceeded, the API may return:
 | Get All Departments | No | No | No | Yes |
 | Create Department | No | No | Yes | Yes |
 | Update Department | No | No | Yes | Yes |
-| Delete Department | No | No | No | Yes |
-| Restore Department | No | No | No | Yes |
+| Deactivate Department | No | No | No | Yes |
+| Reactivate Department | No | No | No | Yes |
 | View Interns | No | Restricted | Yes | Yes |
 | View All Interns | No | No | No | Yes |
 | Create Intern | No | No | Yes | Yes |
 | Update Intern | No | No | Yes | Yes |
-| Delete Intern | No | No | No | Yes |
-| Restore Intern | No | No | No | Yes |
+| Deactivate Intern | No | No | No | Yes |
+| Reactivate Intern | No | No | No | Yes |
 | View Tasks | No | Restricted | Yes | Yes |
 | View All Tasks | No | No | No | Yes |
 | Create Task | No | Restricted | Restricted | Yes |
 | Update Task | No | Restricted | Restricted | Yes |
-| Delete Task | No | Restricted | Restricted | Yes |
-| Restore Task | No | No | No | Yes |
+| Deactivate Task | No | Restricted | Restricted | Yes |
+| Reactivate Task | No | No | No | Yes |
 
-`Restricted` means that access depends on additional authorization and business rules implemented in the Business layer.
+`Restricted` means that access depends on additional authorization and Business rules implemented in the Business layer.
 
 ---
 
@@ -671,7 +839,7 @@ When a configured request limit is exceeded, the API may return:
 
 Frontend authorization is not considered the main security boundary of the application.
 
-Critical authorization checks and business rules are also implemented in the backend Business layer.
+Critical authorization checks and Business rules are also implemented in the backend Business layer.
 
 This prevents important application rules from being bypassed through direct API requests.
 
@@ -679,6 +847,7 @@ The backend also includes:
 
 - JWT validation
 - Role-based authorization
+- Centralized role interpretation
 - HttpOnly authentication cookies
 - Refresh token rotation
 - Refresh token revocation
@@ -687,6 +856,10 @@ The backend also includes:
 - CORS configuration
 - HTTPS redirection outside development
 - Global exception handling
+- Project-owned application logging
+- Centralized API response metadata
+
+Sensitive values such as passwords, hashes, access tokens, refresh tokens, and secret keys should not be written to application logs.
 
 ---
 
@@ -702,6 +875,8 @@ The documented areas include:
 - Interns
 - Tasks
 - Role-based authorization
+- Role handling
 - Authentication cookies
 - Rate limiting
+- API response conventions
 - Main API security behavior

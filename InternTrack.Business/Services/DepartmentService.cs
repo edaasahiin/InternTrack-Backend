@@ -3,7 +3,6 @@ using InternTrack.Business.Interfaces;
 using InternTrack.DataAccess.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
-using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -13,12 +12,12 @@ public class DepartmentService : IDepartmentService
 
     private readonly IInternRepository _internRepository;
 
-    private readonly ILogger<DepartmentService>? _logger;
+    private readonly IAppLogger _logger;
 
     public DepartmentService(
         IDepartmentRepository departmentRepository,
         IInternRepository internRepository,
-        ILogger<DepartmentService>? logger = null)
+        IAppLogger logger)
     {
         _departmentRepository = departmentRepository;
 
@@ -43,7 +42,7 @@ public class DepartmentService : IDepartmentService
 
         if (department == null)
         {
-            _logger?.LogWarning("Department was not found. DepartmentId: {DepartmentId}", id);
+            _logger.LogWarning("Department was not found. DepartmentId: {DepartmentId}", id);
 
             return ServiceResult<Department>.NotFound("Departman bulunamadı.");
         }
@@ -57,18 +56,17 @@ public class DepartmentService : IDepartmentService
 
         if (string.IsNullOrWhiteSpace(departmentName))
         {
-            _logger?.LogWarning("Department creation rejected because department name is empty.");
+            _logger.LogWarning("Department creation rejected because department name is empty.");
 
             return ServiceResult.ValidationError("Departman adı boş bırakılamaz.");
         }
 
-        var nameExists = await _departmentRepository.NameExistsAsync(departmentName);
+        var matchingDepartment = await _departmentRepository.GetByNameIncludingInactiveAsync(departmentName);
 
-        if (nameExists)
+        if (matchingDepartment != null)
         {
-            _logger?.LogWarning(
-                "Department creation rejected because department name already exists. DepartmentName: {DepartmentName}",
-                departmentName);
+            _logger.LogWarning(
+                "Department creation rejected because department name already exists.");
 
             return ServiceResult.Conflict("Bu departman zaten kayıtlı.");
         }
@@ -80,10 +78,9 @@ public class DepartmentService : IDepartmentService
 
         await _departmentRepository.AddAsync(department);
 
-        _logger?.LogInformation(
-            "Department created successfully. DepartmentId: {DepartmentId}, DepartmentName: {DepartmentName}",
-            department.Id,
-            department.Name);
+        _logger.LogInformation(
+            "Department created successfully. DepartmentId: {DepartmentId}",
+            department.Id);
 
         return ServiceResult.Ok("Departman oluşturuldu.");
     }
@@ -94,7 +91,7 @@ public class DepartmentService : IDepartmentService
 
         if (department == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Department update failed because department was not found. DepartmentId: {DepartmentId}",
                 id);
 
@@ -105,21 +102,20 @@ public class DepartmentService : IDepartmentService
 
         if (string.IsNullOrWhiteSpace(departmentName))
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Department update rejected because department name is empty. DepartmentId: {DepartmentId}",
                 id);
 
             return ServiceResult.ValidationError("Departman adı boş bırakılamaz.");
         }
 
-        var nameExists = await _departmentRepository.NameExistsAsync(departmentName, id);
+        var matchingDepartment = await _departmentRepository.GetByNameIncludingInactiveAsync(departmentName, id);
 
-        if (nameExists)
+        if (matchingDepartment != null)
         {
-            _logger?.LogWarning(
-                "Department update rejected because department name already exists. DepartmentId: {DepartmentId}, DepartmentName: {DepartmentName}",
-                id,
-                departmentName);
+            _logger.LogWarning(
+                "Department update rejected because department name already exists. DepartmentId: {DepartmentId}",
+                id);
 
             return ServiceResult.Conflict("Bu departman zaten kayıtlı.");
         }
@@ -128,21 +124,20 @@ public class DepartmentService : IDepartmentService
 
         await _departmentRepository.UpdateAsync(department);
 
-        _logger?.LogInformation(
-            "Department updated successfully. DepartmentId: {DepartmentId}, DepartmentName: {DepartmentName}",
-            department.Id,
-            department.Name);
+        _logger.LogInformation(
+            "Department updated successfully. DepartmentId: {DepartmentId}",
+            department.Id);
 
         return ServiceResult.Ok("Departman güncellendi.");
     }
 
-    public async Task<ServiceResult> DeleteAsync(int id)
+    public async Task<ServiceResult> DeactivateDepartmentAsync(int id)
     {
         var department = await _departmentRepository.GetByIdAsync(id);
 
         if (department == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Department deletion failed because department was not found. DepartmentId: {DepartmentId}",
                 id);
 
@@ -153,30 +148,29 @@ public class DepartmentService : IDepartmentService
 
         if (hasInterns)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Department deletion rejected because department still has active interns. DepartmentId: {DepartmentId}",
                 id);
 
             return ServiceResult.Conflict("Bu departmana bağlı stajyerler olduğu için departman silinemez.");
         }
 
-        await _departmentRepository.DeleteAsync(department);
+        await _departmentRepository.DeactivateDepartmentAsync(department);
 
-        _logger?.LogInformation(
-            "Department soft deleted successfully. DepartmentId: {DepartmentId}, DepartmentName: {DepartmentName}",
-            department.Id,
-            department.Name);
+        _logger.LogInformation(
+            "Department soft deleted successfully. DepartmentId: {DepartmentId}",
+            department.Id);
 
         return ServiceResult.Ok("Departman silindi.");
     }
 
-    public async Task<ServiceResult> RestoreAsync(int id)
+    public async Task<ServiceResult> ReactivateDepartmentAsync(int id)
     {
         var department = await _departmentRepository.GetByIdIncludingInactiveAsync(id);
 
         if (department == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Department restore failed because department was not found. DepartmentId: {DepartmentId}",
                 id);
 
@@ -185,19 +179,18 @@ public class DepartmentService : IDepartmentService
 
         if (department.IsActive)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Department restore rejected because department is already active. DepartmentId: {DepartmentId}",
                 id);
 
             return ServiceResult.Conflict("Departman zaten aktif.");
         }
 
-        await _departmentRepository.RestoreAsync(department);
+        await _departmentRepository.ReactivateDepartmentAsync(department);
 
-        _logger?.LogInformation(
-            "Department restored successfully. DepartmentId: {DepartmentId}, DepartmentName: {DepartmentName}",
-            department.Id,
-            department.Name);
+        _logger.LogInformation(
+            "Department restored successfully. DepartmentId: {DepartmentId}",
+            department.Id);
 
         return ServiceResult.Ok("Departman tekrar aktif hale getirildi.");
     }

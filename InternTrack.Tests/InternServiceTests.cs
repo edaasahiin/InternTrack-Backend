@@ -1,3 +1,4 @@
+using InternTrack.Business.Interfaces;
 using InternTrack.Business.Common;
 using InternTrack.Business.Services;
 using InternTrack.Core.Models;
@@ -11,7 +12,7 @@ namespace InternTrack.Tests;
 public class InternServiceTests
 {
     [Fact]
-    public async Task DeleteAsync_InternDoesNotExist_ShouldReturnNotFound()
+    public async Task DeactivateInternAsync_InternDoesNotExist_ShouldReturnNotFound()
     {
         // ARRANGE
         var internRepositoryMock = new Mock<IInternRepository>();
@@ -27,9 +28,10 @@ public class InternServiceTests
         var service = new InternService(
             internRepositoryMock.Object,
             departmentRepositoryMock.Object,
-            userRepositoryMock.Object);
+            userRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.DeleteAsync(internId);
+        var result = await service.DeactivateInternAsync(internId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -37,11 +39,11 @@ public class InternServiceTests
 
         Assert.Equal("Stajyer bulunamadı.", result.Message);
 
-        internRepositoryMock.Verify(repository => repository.DeleteAsync(It.IsAny<Intern>()), Times.Never);
+        internRepositoryMock.Verify(repository => repository.DeactivateInternAsync(It.IsAny<Intern>()), Times.Never);
     }
 
     [Fact]
-    public async Task DeleteAsync_InternExists_ShouldDeleteSuccessfully()
+    public async Task DeactivateInternAsync_InternExists_ShouldDeactivateSuccessfully()
     {
         // ARRANGE
         var internRepositoryMock = new Mock<IInternRepository>();
@@ -68,9 +70,10 @@ public class InternServiceTests
         var service = new InternService(
             internRepositoryMock.Object,
             departmentRepositoryMock.Object,
-            userRepositoryMock.Object);
+            userRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.DeleteAsync(internId);
+        var result = await service.DeactivateInternAsync(internId);
         // ASSERT
         Assert.True(result.Success);
 
@@ -78,13 +81,13 @@ public class InternServiceTests
 
         Assert.Equal("Stajyer pasif hale getirildi.", result.Message);
 
-        internRepositoryMock.Verify(repository => repository.DeleteAsync(intern), Times.Once);
+        internRepositoryMock.Verify(repository => repository.DeactivateInternAsync(intern), Times.Once);
 
         userRepositoryMock.Verify(repository => repository.DeleteAsync(It.IsAny<User>()), Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_InternDoesNotExist_ShouldReturnNotFound()
+    public async Task ReactivateInternAsync_InternDoesNotExist_ShouldReturnNotFound()
     {
         // ARRANGE
         var internRepositoryMock = new Mock<IInternRepository>();
@@ -102,9 +105,10 @@ public class InternServiceTests
         var service = new InternService(
             internRepositoryMock.Object,
             departmentRepositoryMock.Object,
-            userRepositoryMock.Object);
+            userRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(internId);
+        var result = await service.ReactivateInternAsync(internId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -112,11 +116,11 @@ public class InternServiceTests
 
         Assert.Equal("Stajyer bulunamadı.", result.Message);
 
-        internRepositoryMock.Verify(repository => repository.RestoreAsync(It.IsAny<Intern>()), Times.Never);
+        internRepositoryMock.Verify(repository => repository.ReactivateInternAsync(It.IsAny<Intern>()), Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_InternAlreadyActive_ShouldReturnConflict()
+    public async Task ReactivateInternAsync_InternAlreadyActive_ShouldReturnConflict()
     {
         // ARRANGE
         var internRepositoryMock = new Mock<IInternRepository>();
@@ -145,9 +149,10 @@ public class InternServiceTests
         var service = new InternService(
             internRepositoryMock.Object,
             departmentRepositoryMock.Object,
-            userRepositoryMock.Object);
+            userRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(internId);
+        var result = await service.ReactivateInternAsync(internId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -155,11 +160,11 @@ public class InternServiceTests
 
         Assert.Equal("Stajyer zaten aktif.", result.Message);
 
-        internRepositoryMock.Verify(repository => repository.RestoreAsync(It.IsAny<Intern>()), Times.Never);
+        internRepositoryMock.Verify(repository => repository.ReactivateInternAsync(It.IsAny<Intern>()), Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_DepartmentIsInactive_ShouldReturnConflict()
+    public async Task ReactivateInternAsync_DepartmentIsInactive_ShouldReturnConflict()
     {
         // ARRANGE
         var internRepositoryMock = new Mock<IInternRepository>();
@@ -193,9 +198,10 @@ public class InternServiceTests
         var service = new InternService(
             internRepositoryMock.Object,
             departmentRepositoryMock.Object,
-            userRepositoryMock.Object);
+            userRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(internId);
+        var result = await service.ReactivateInternAsync(internId);
         // ASSERT
         Assert.False(result.Success);
 
@@ -205,11 +211,11 @@ public class InternServiceTests
             "Stajyerin bağlı olduğu departman pasif veya bulunamadı. Önce departmanı aktif hale getirin.",
             result.Message);
 
-        internRepositoryMock.Verify(repository => repository.RestoreAsync(It.IsAny<Intern>()), Times.Never);
+        internRepositoryMock.Verify(repository => repository.ReactivateInternAsync(It.IsAny<Intern>()), Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_InactiveInternWithActiveDepartment_ShouldRestoreSuccessfully()
+    public async Task ReactivateInternAsync_InactiveInternWithActiveDepartment_ShouldReactivateSuccessfully()
     {
         // ARRANGE
         var internRepositoryMock = new Mock<IInternRepository>();
@@ -248,9 +254,10 @@ public class InternServiceTests
         var service = new InternService(
             internRepositoryMock.Object,
             departmentRepositoryMock.Object,
-            userRepositoryMock.Object);
+            userRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
         // ACT
-        var result = await service.RestoreAsync(internId);
+        var result = await service.ReactivateInternAsync(internId);
         // ASSERT
         Assert.True(result.Success);
 
@@ -258,7 +265,7 @@ public class InternServiceTests
 
         Assert.Equal("Stajyer tekrar aktif hale getirildi.", result.Message);
 
-        internRepositoryMock.Verify(repository => repository.RestoreAsync(intern), Times.Once);
+        internRepositoryMock.Verify(repository => repository.ReactivateInternAsync(intern), Times.Once);
     }
 
 
@@ -303,7 +310,8 @@ public async Task UpdateAsync_DepartmentDoesNotExist_ShouldReturnValidationError
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -343,7 +351,8 @@ public async Task UpdateAsync_InternDoesNotExist_ShouldReturnNotFound()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -434,7 +443,8 @@ public async Task UpdateAsync_ValidIntern_ShouldUpdateSuccessfully()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -530,7 +540,8 @@ public async Task UpdateAsync_EmailAlreadyUsedByAnotherUser_ShouldReturnConflict
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -625,7 +636,8 @@ public async Task UpdateAsync_EmailAlreadyUsedByAnotherIntern_ShouldReturnConfli
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -702,7 +714,8 @@ public async Task UpdateAsync_LinkedUserDoesNotExist_ShouldReturnNotFound()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -790,7 +803,8 @@ public async Task UpdateAsync_EmailUnchanged_ShouldSkipDuplicateEmailChecksAndUp
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -898,7 +912,8 @@ public async Task UpdateAsync_ValuesWithWhitespace_ShouldTrimAndUpdateSuccessful
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -944,7 +959,8 @@ public async Task GetByIdAsync_InternDoesNotExist_ShouldReturnNotFound()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -1008,7 +1024,8 @@ public async Task GetByIdAsync_InternTriesToAccessAnotherIntern_ShouldReturnForb
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -1058,7 +1075,8 @@ public async Task GetByIdAsync_InternAccessesOwnProfile_ShouldReturnSuccessfully
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -1116,7 +1134,8 @@ public async Task GetByIdAsync_CurrentInternProfileDoesNotExist_ShouldReturnNotF
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -1162,7 +1181,8 @@ public async Task GetByIdAsync_Admin_ShouldReturnInternWithoutCurrentInternCheck
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -1223,7 +1243,8 @@ public async Task GetAllAsync_Admin_ShouldReturnAllInterns()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -1276,7 +1297,8 @@ public async Task GetAllAsync_Intern_ShouldReturnOnlyOwnProfile()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -1321,7 +1343,8 @@ public async Task GetAllAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -1384,7 +1407,8 @@ public async Task GetAllIncludingInactiveAsync_ShouldReturnActiveAndInactiveInte
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllIncludingInactiveAsync();
@@ -1410,7 +1434,7 @@ public async Task GetAllIncludingInactiveAsync_ShouldReturnActiveAndInactiveInte
 }
 
 [Fact]
-public async Task AddAsync_DepartmentDoesNotExist_ShouldNotCheckEmailsOrCreateUser()
+public async Task CreateInternWithAccountAsync_DepartmentDoesNotExist_ShouldNotCheckEmailsOrCreateUser()
 {
     // ARRANGE
     var internRepositoryMock = new Mock<IInternRepository>();
@@ -1433,10 +1457,11 @@ public async Task AddAsync_DepartmentDoesNotExist_ShouldNotCheckEmailsOrCreateUs
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.AddAsync(dto);
+    var result = await service.CreateInternWithAccountAsync(dto);
 
     // ASSERT
     Assert.False(result.Success);
@@ -1460,7 +1485,7 @@ public async Task AddAsync_DepartmentDoesNotExist_ShouldNotCheckEmailsOrCreateUs
 }
 
 [Fact]
-public async Task AddAsync_ValidData_ShouldCreateLinkedUserAndInternWithNormalizedValues()
+public async Task CreateInternWithAccountAsync_ValidData_ShouldCreateLinkedUserAndInternWithNormalizedValues()
 {
     // ARRANGE
     var internRepositoryMock = new Mock<IInternRepository>();
@@ -1505,10 +1530,11 @@ public async Task AddAsync_ValidData_ShouldCreateLinkedUserAndInternWithNormaliz
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.AddAsync(dto);
+    var result = await service.CreateInternWithAccountAsync(dto);
 
     // ASSERT
     Assert.True(result.Success);
@@ -1543,7 +1569,7 @@ public async Task AddAsync_ValidData_ShouldCreateLinkedUserAndInternWithNormaliz
 }
 
 [Fact]
-public async Task AddAsync_UserEmailAlreadyExists_ShouldReturnConflictAndSkipInternEmailCheck()
+public async Task CreateInternWithAccountAsync_UserEmailAlreadyExists_ShouldReturnConflictAndSkipInternEmailCheck()
 {
     // ARRANGE
     var internRepositoryMock = new Mock<IInternRepository>();
@@ -1577,10 +1603,11 @@ public async Task AddAsync_UserEmailAlreadyExists_ShouldReturnConflictAndSkipInt
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.AddAsync(dto);
+    var result = await service.CreateInternWithAccountAsync(dto);
 
     // ASSERT
     Assert.False(result.Success);
@@ -1600,7 +1627,7 @@ public async Task AddAsync_UserEmailAlreadyExists_ShouldReturnConflictAndSkipInt
 }
 
 [Fact]
-public async Task AddAsync_InternEmailAlreadyExists_ShouldReturnConflictAndNotCreateUser()
+public async Task CreateInternWithAccountAsync_InternEmailAlreadyExists_ShouldReturnConflictAndNotCreateUser()
 {
     // ARRANGE
     var internRepositoryMock = new Mock<IInternRepository>();
@@ -1638,10 +1665,11 @@ public async Task AddAsync_InternEmailAlreadyExists_ShouldReturnConflictAndNotCr
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.AddAsync(dto);
+    var result = await service.CreateInternWithAccountAsync(dto);
 
     // ASSERT
     Assert.False(result.Success);
@@ -1657,7 +1685,7 @@ public async Task AddAsync_InternEmailAlreadyExists_ShouldReturnConflictAndNotCr
 }
 
 [Fact]
-public async Task AddAsync_EmailWithWhitespace_ShouldCheckDuplicatesUsingTrimmedEmail()
+public async Task CreateInternWithAccountAsync_EmailWithWhitespace_ShouldCheckDuplicatesUsingTrimmedEmail()
 {
     // ARRANGE
     var internRepositoryMock = new Mock<IInternRepository>();
@@ -1699,10 +1727,11 @@ public async Task AddAsync_EmailWithWhitespace_ShouldCheckDuplicatesUsingTrimmed
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.AddAsync(dto);
+    var result = await service.CreateInternWithAccountAsync(dto);
 
     // ASSERT
     Assert.True(result.Success);
@@ -1762,7 +1791,8 @@ public async Task GetAllAsync_HR_ShouldReturnAllInterns()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -1813,7 +1843,8 @@ public async Task GetByIdAsync_HR_ShouldReturnInternWithoutCurrentInternCheck()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -1874,7 +1905,8 @@ public async Task GetAllIncludingInactiveAsync_ShouldMapAvatarFromLinkedUser()
     var service = new InternService(
         internRepositoryMock.Object,
         departmentRepositoryMock.Object,
-        userRepositoryMock.Object);
+        userRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllIncludingInactiveAsync();

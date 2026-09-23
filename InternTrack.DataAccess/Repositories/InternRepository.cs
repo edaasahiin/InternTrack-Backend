@@ -96,7 +96,7 @@ public class InternRepository : IInternRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(Intern intern)
+    public async Task DeactivateInternAsync(Intern intern)
     {
         intern.IsActive = false;
 
@@ -105,7 +105,7 @@ public class InternRepository : IInternRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task RestoreAsync(Intern intern)
+    public async Task ReactivateInternAsync(Intern intern)
     {
         intern.IsActive = true;
 

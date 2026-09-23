@@ -1,3 +1,4 @@
+using InternTrack.Business.Interfaces;
 using InternTrack.Business.Common;
 using InternTrack.Business.Services;
 using InternTrack.Core.DTOs;
@@ -62,7 +63,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -136,7 +138,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -210,7 +213,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -284,7 +288,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -332,7 +337,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -416,7 +422,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -499,7 +506,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -580,7 +588,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -660,7 +669,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -740,7 +750,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -807,7 +818,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -893,7 +905,8 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result = await service.UpdateAsync(
@@ -917,7 +930,7 @@ public class TaskServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_TaskDoesNotExist_ShouldReturnNotFound()
+    public async Task DeactivateTaskAsync_TaskDoesNotExist_ShouldReturnNotFound()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -932,10 +945,11 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
-        var result = await service.DeleteAsync(
+        var result = await service.DeactivateTaskAsync(
             taskId,
             userId,
             "Admin");
@@ -946,12 +960,12 @@ public class TaskServiceTests
         Assert.Equal("Görev bulunamadı.", result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+            repository => repository.DeactivateTaskAsync(It.IsAny<TaskItem>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task DeleteAsync_AdminDeletesTask_ShouldDeleteSuccessfully()
+    public async Task DeactivateTaskAsync_AdminDeletesTask_ShouldDeactivateSuccessfully()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -977,10 +991,11 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
-        var result = await service.DeleteAsync(
+        var result = await service.DeactivateTaskAsync(
             taskId,
             adminUserId,
             "Admin");
@@ -991,12 +1006,12 @@ public class TaskServiceTests
         Assert.Equal("Görev silindi.", result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.DeleteAsync(task),
+            repository => repository.DeactivateTaskAsync(task),
             Times.Once);
     }
 
     [Fact]
-    public async Task DeleteAsync_HRTriesToDeleteTask_ShouldReturnForbidden()
+    public async Task DeactivateTaskAsync_HRTriesToDeleteTask_ShouldReturnForbidden()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1022,10 +1037,11 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
-        var result = await service.DeleteAsync(
+        var result = await service.DeactivateTaskAsync(
             taskId,
             hrUserId,
             "HR");
@@ -1038,12 +1054,12 @@ public class TaskServiceTests
             result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+            repository => repository.DeactivateTaskAsync(It.IsAny<TaskItem>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task DeleteAsync_InternCreatedOwnTask_ShouldDeleteRegardlessOfCompletionPermission()
+    public async Task DeactivateTaskAsync_InternCreatedOwnTask_ShouldDeleteRegardlessOfCompletionPermission()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1085,10 +1101,11 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
-        var result = await service.DeleteAsync(
+        var result = await service.DeactivateTaskAsync(
             taskId,
             userId,
             "Intern");
@@ -1099,12 +1116,12 @@ public class TaskServiceTests
         Assert.Equal("Görev silindi.", result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.DeleteAsync(task),
+            repository => repository.DeactivateTaskAsync(task),
             Times.Once);
     }
 
     [Fact]
-    public async Task RestoreAsync_TaskDoesNotExist_ShouldReturnNotFound()
+    public async Task ReactivateTaskAsync_TaskDoesNotExist_ShouldReturnNotFound()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1119,11 +1136,12 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
-            await service.RestoreAsync(taskId);
+            await service.ReactivateTaskAsync(taskId);
 
         // ASSERT
         Assert.False(result.Success);
@@ -1131,12 +1149,12 @@ public class TaskServiceTests
         Assert.Equal("Görev bulunamadı.", result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.RestoreAsync(It.IsAny<TaskItem>()),
+            repository => repository.ReactivateTaskAsync(It.IsAny<TaskItem>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_TaskAlreadyActive_ShouldReturnConflict()
+    public async Task ReactivateTaskAsync_TaskAlreadyActive_ShouldReturnConflict()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1161,11 +1179,12 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
-            await service.RestoreAsync(taskId);
+            await service.ReactivateTaskAsync(taskId);
 
         // ASSERT
         Assert.False(result.Success);
@@ -1177,12 +1196,12 @@ public class TaskServiceTests
             Times.Never);
 
         taskRepositoryMock.Verify(
-            repository => repository.RestoreAsync(It.IsAny<TaskItem>()),
+            repository => repository.ReactivateTaskAsync(It.IsAny<TaskItem>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_LinkedInternIsInactive_ShouldReturnConflict()
+    public async Task ReactivateTaskAsync_LinkedInternIsInactive_ShouldReturnConflict()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1213,11 +1232,12 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
-            await service.RestoreAsync(taskId);
+            await service.ReactivateTaskAsync(taskId);
 
         // ASSERT
         Assert.False(result.Success);
@@ -1228,12 +1248,12 @@ public class TaskServiceTests
             result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.RestoreAsync(It.IsAny<TaskItem>()),
+            repository => repository.ReactivateTaskAsync(It.IsAny<TaskItem>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task RestoreAsync_InactiveTaskWithActiveIntern_ShouldRestoreSuccessfully()
+    public async Task ReactivateTaskAsync_InactiveTaskWithActiveIntern_ShouldReactivateSuccessfully()
     {
         // ARRANGE
         var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1274,11 +1294,12 @@ public class TaskServiceTests
 
         var service = new TaskService(
             taskRepositoryMock.Object,
-            internRepositoryMock.Object);
+            internRepositoryMock.Object,
+            logger: Mock.Of<IAppLogger>());
 
         // ACT
         var result =
-            await service.RestoreAsync(taskId);
+            await service.ReactivateTaskAsync(taskId);
 
         // ASSERT
         Assert.True(result.Success);
@@ -1289,7 +1310,7 @@ public class TaskServiceTests
             result.Message);
 
         taskRepositoryMock.Verify(
-            repository => repository.RestoreAsync(task),
+            repository => repository.ReactivateTaskAsync(task),
             Times.Once);
     }
 
@@ -1321,7 +1342,8 @@ public class TaskServiceTests
         };
         taskRepository.Setup(repository => repository.GetByIdAsync(5)).ReturnsAsync(task);
         internRepository.Setup(repository => repository.GetByUserIdAsync(10)).ReturnsAsync(intern);
-        var service = new TaskService(taskRepository.Object, internRepository.Object);
+        var service = new TaskService(taskRepository.Object, internRepository.Object,
+            logger: Mock.Of<IAppLogger>());
         var dto = new UpdateTaskDto
         {
             Title = "Changed title",
@@ -1352,7 +1374,7 @@ public class TaskServiceTests
     }
 
     [Fact]
-public async Task DeleteAsync_InternTriesToDeleteAssignedTaskWithoutPermission_ShouldReturnForbidden()
+public async Task DeactivateTaskAsync_InternTriesToDeleteAssignedTaskWithoutPermission_ShouldReturnForbidden()
 {
     // ARRANGE
     var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1394,10 +1416,11 @@ public async Task DeleteAsync_InternTriesToDeleteAssignedTaskWithoutPermission_S
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(
+    var result = await service.DeactivateTaskAsync(
         taskId,
         userId,
         "Intern");
@@ -1410,12 +1433,12 @@ public async Task DeleteAsync_InternTriesToDeleteAssignedTaskWithoutPermission_S
         result.Message);
 
     taskRepositoryMock.Verify(
-        repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+        repository => repository.DeactivateTaskAsync(It.IsAny<TaskItem>()),
         Times.Never);
 }
 
 [Fact]
-public async Task DeleteAsync_InternDeletesCompletedAssignedTaskWithPermission_ShouldDeleteSuccessfully()
+public async Task DeactivateTaskAsync_InternDeletesCompletedAssignedTaskWithPermission_ShouldDeactivateSuccessfully()
 {
     // ARRANGE
     var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1457,10 +1480,11 @@ public async Task DeleteAsync_InternDeletesCompletedAssignedTaskWithPermission_S
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(
+    var result = await service.DeactivateTaskAsync(
         taskId,
         userId,
         "Intern");
@@ -1473,7 +1497,7 @@ public async Task DeleteAsync_InternDeletesCompletedAssignedTaskWithPermission_S
         result.Message);
 
     taskRepositoryMock.Verify(
-        repository => repository.DeleteAsync(task),
+        repository => repository.DeactivateTaskAsync(task),
         Times.Once);
 }
 
@@ -1532,7 +1556,8 @@ public async Task UpdateAsync_InternStartsToDoTask_ShouldUpdateSuccessfully()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -1609,7 +1634,8 @@ public async Task UpdateAsync_InternTriesToReopenCompletedTask_ShouldReturnValid
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -1631,7 +1657,7 @@ public async Task UpdateAsync_InternTriesToReopenCompletedTask_ShouldReturnValid
 }
 
 [Fact]
-public async Task DeleteAsync_InternTriesToDeleteIncompleteAssignedTaskWithPermission_ShouldReturnForbidden()
+public async Task DeactivateTaskAsync_InternTriesToDeleteIncompleteAssignedTaskWithPermission_ShouldReturnForbidden()
 {
     // ARRANGE
     var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1673,10 +1699,11 @@ public async Task DeleteAsync_InternTriesToDeleteIncompleteAssignedTaskWithPermi
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(
+    var result = await service.DeactivateTaskAsync(
         taskId,
         userId,
         "Intern");
@@ -1686,12 +1713,12 @@ public async Task DeleteAsync_InternTriesToDeleteIncompleteAssignedTaskWithPermi
     Assert.Equal(ResultType.Forbidden, result.Type);
 
     taskRepositoryMock.Verify(
-        repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+        repository => repository.DeactivateTaskAsync(It.IsAny<TaskItem>()),
         Times.Never);
 }
 
 [Fact]
-public async Task DeleteAsync_InternTriesToDeleteAnotherInternTask_ShouldReturnForbidden()
+public async Task DeactivateTaskAsync_InternTriesToDeleteAnotherInternTask_ShouldReturnForbidden()
 {
     // ARRANGE
     var taskRepositoryMock = new Mock<ITaskRepository>();
@@ -1734,10 +1761,11 @@ public async Task DeleteAsync_InternTriesToDeleteAnotherInternTask_ShouldReturnF
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
-    var result = await service.DeleteAsync(
+    var result = await service.DeactivateTaskAsync(
         taskId,
         userId,
         "Intern");
@@ -1747,7 +1775,7 @@ public async Task DeleteAsync_InternTriesToDeleteAnotherInternTask_ShouldReturnF
     Assert.Equal(ResultType.Forbidden, result.Type);
 
     taskRepositoryMock.Verify(
-        repository => repository.DeleteAsync(It.IsAny<TaskItem>()),
+        repository => repository.DeactivateTaskAsync(It.IsAny<TaskItem>()),
         Times.Never);
 }
 
@@ -1807,7 +1835,8 @@ public async Task UpdateAsync_HRTriesToReopenCompletedTask_ShouldReturnValidatio
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -1884,7 +1913,8 @@ public async Task UpdateAsync_AdminTriesToChangeToDoDirectlyToDone_ShouldReturnV
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -1965,7 +1995,8 @@ public async Task UpdateAsync_HRTriesToMoveInProgressBackToToDo_ShouldReturnVali
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.UpdateAsync(
@@ -2017,7 +2048,8 @@ public async Task AddAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(
@@ -2059,7 +2091,8 @@ public async Task AddAsync_UnauthorizedRole_ShouldReturnForbidden()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(
@@ -2110,7 +2143,8 @@ public async Task AddAsync_PastDueDate_ShouldReturnValidationError()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(
@@ -2162,7 +2196,8 @@ public async Task AddAsync_AdminSelectedInternDoesNotExist_ShouldReturnValidatio
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(
@@ -2224,7 +2259,8 @@ public async Task AddAsync_InternShouldIgnoreDtoInternIdAndAssignTaskToOwnProfil
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.AddAsync(
@@ -2293,7 +2329,8 @@ public async Task GetByIdAsync_InternTriesToAccessAnotherInternTask_ShouldReturn
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -2353,7 +2390,8 @@ public async Task GetByIdAsync_InternAccessesOwnTask_ShouldReturnTaskSuccessfull
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -2421,7 +2459,8 @@ public async Task GetAllAsync_Intern_ShouldReturnOnlyOwnTasks()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -2462,7 +2501,8 @@ public async Task GetAllAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -2519,7 +2559,8 @@ public async Task GetAllAsync_Admin_ShouldReturnAllTasks()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -2579,7 +2620,8 @@ public async Task GetAllAsync_HR_ShouldReturnAllTasks()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetAllAsync(
@@ -2622,7 +2664,8 @@ public async Task GetByIdAsync_TaskDoesNotExist_ShouldReturnNotFound()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -2673,7 +2716,8 @@ public async Task GetByIdAsync_InternProfileDoesNotExist_ShouldReturnNotFound()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -2717,7 +2761,8 @@ public async Task GetByIdAsync_Admin_ShouldReturnTaskWithoutInternCheck()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result = await service.GetByIdAsync(
@@ -2773,7 +2818,8 @@ public async Task GetAllIncludingInactiveAsync_ShouldReturnAllTasks()
 
     var service = new TaskService(
         taskRepositoryMock.Object,
-        internRepositoryMock.Object);
+        internRepositoryMock.Object,
+        logger: Mock.Of<IAppLogger>());
 
     // ACT
     var result =

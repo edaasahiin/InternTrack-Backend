@@ -1,10 +1,10 @@
+using InternTrack.Core.Helpers;
 using InternTrack.Core.Constants;
 using InternTrack.Business.Common;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Models;
 using InternTrack.DataAccess.Interfaces;
-using Microsoft.Extensions.Logging;
 
 namespace InternTrack.Business.Services;
 
@@ -13,13 +13,13 @@ public class DashboardService : IDashboardService
     private readonly IInternRepository _internRepository;
     private readonly ITaskRepository _taskRepository;
     private readonly IDepartmentRepository _departmentRepository;
-    private readonly ILogger<DashboardService>? _logger;
+    private readonly IAppLogger _logger;
 
     public DashboardService(
         IInternRepository internRepository,
         ITaskRepository taskRepository,
         IDepartmentRepository departmentRepository,
-        ILogger<DashboardService>? logger = null)
+        IAppLogger logger)
     {
         _internRepository = internRepository;
 
@@ -32,7 +32,7 @@ public class DashboardService : IDashboardService
 
     public async Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(int userId, string role)
     {
-        if (role == Roles.Admin || role == Roles.HR)
+        if (RoleHelper.IsAdminClaim(role) || RoleHelper.IsHrClaim(role))
         {
             var interns = await _internRepository.GetAllAsync();
 
@@ -51,7 +51,7 @@ public class DashboardService : IDashboardService
 
         if (intern == null)
         {
-            _logger?.LogWarning(
+            _logger.LogWarning(
                 "Dashboard statistics could not be retrieved because intern profile was not found. UserId: {UserId}",
                 userId);
 

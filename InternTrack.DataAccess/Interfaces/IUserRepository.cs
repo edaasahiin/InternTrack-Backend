@@ -2,7 +2,7 @@ using InternTrack.Core.Models;
 
 namespace InternTrack.DataAccess.Interfaces;
 
-public interface IUserRepository
+public interface IUserRepository : IScopedRepository
 {
     Task<User?> GetByEmailAsync(string email);
 
