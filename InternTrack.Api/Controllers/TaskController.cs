@@ -1,9 +1,8 @@
-using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
+using InternTrack.Api.Conventions;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.Constants;
 using InternTrack.Core.DTOs;
-using InternTrack.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,9 +23,6 @@ public class TaskController : ControllerBase
     }
 
     [HttpGet]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetTasks))]
     public async Task<IActionResult> GetAll()
     {
         if (!CurrentUserHelper.TryGetUserInfo(
@@ -36,7 +32,8 @@ public class TaskController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -52,9 +49,6 @@ public class TaskController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpGet("all")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetAllTasks))]
     public async Task<IActionResult> GetAllIncludingInactive()
     {
         var result =
@@ -66,9 +60,6 @@ public class TaskController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetTaskById))]
     public async Task<IActionResult> GetById(
         [FromRoute] int id)
     {
@@ -79,7 +70,8 @@ public class TaskController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -95,10 +87,8 @@ public class TaskController : ControllerBase
     }
 
     [HttpPost]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.CreateTask))]
-    public async Task<IActionResult> Add(
+    [ApiConventionMethod(typeof(InternTrackApiConventions), nameof(InternTrackApiConventions.CreateTask))]
+    public async Task<IActionResult> CreateTask(
         [FromBody] CreateTaskDto dto)
     {
         if (!CurrentUserHelper.TryGetUserInfo(
@@ -108,7 +98,8 @@ public class TaskController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -125,10 +116,8 @@ public class TaskController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.UpdateTask))]
-    public async Task<IActionResult> Update(
+    [ApiConventionMethod(typeof(InternTrackApiConventions), nameof(InternTrackApiConventions.UpdateTask))]
+    public async Task<IActionResult> UpdateTask(
         [FromRoute] int id,
         [FromBody] UpdateTaskDto dto)
     {
@@ -139,7 +128,8 @@ public class TaskController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -156,9 +146,6 @@ public class TaskController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.DeactivateTask))]
     public async Task<IActionResult> DeactivateTask(
         [FromRoute] int id)
     {
@@ -169,7 +156,8 @@ public class TaskController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -187,14 +175,12 @@ public class TaskController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPatch("{id:int}/restore")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.ReactivateTask))]
     public async Task<IActionResult> ReactivateTask(
         [FromRoute] int id)
     {
         var result =
-            await _service.ReactivateTaskAsync(id);
+            await _service.ReactivateTaskAsync(
+                id);
 
         return ServiceResultMapper.ToActionResult(
             this,

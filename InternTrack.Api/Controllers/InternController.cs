@@ -1,4 +1,3 @@
-using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.Constants;
@@ -23,9 +22,6 @@ public class InternController : ControllerBase
     }
 
     [HttpGet]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetInterns))]
     public async Task<IActionResult> GetAll()
     {
         if (!CurrentUserHelper.TryGetUserInfo(
@@ -35,7 +31,8 @@ public class InternController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -51,9 +48,6 @@ public class InternController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpGet("all")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetAllInterns))]
     public async Task<IActionResult> GetAllIncludingInactive()
     {
         var result =
@@ -65,9 +59,6 @@ public class InternController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetInternById))]
     public async Task<IActionResult> GetById(
         [FromRoute] int id)
     {
@@ -78,7 +69,8 @@ public class InternController : ControllerBase
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 
@@ -95,14 +87,12 @@ public class InternController : ControllerBase
 
     [Authorize(Roles = Roles.AdminOrHR)]
     [HttpPost]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.CreateIntern))]
     public async Task<IActionResult> CreateInternWithAccount(
         [FromBody] CreateInternDto dto)
     {
         var result =
-            await _service.CreateInternWithAccountAsync(dto);
+            await _service.CreateInternWithAccountAsync(
+                dto);
 
         return ServiceResultMapper.ToActionResult(
             this,
@@ -112,9 +102,6 @@ public class InternController : ControllerBase
 
     [Authorize(Roles = Roles.AdminOrHR)]
     [HttpPut("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.UpdateIntern))]
     public async Task<IActionResult> Update(
         [FromRoute] int id,
         [FromBody] UpdateInternDto dto)
@@ -131,14 +118,12 @@ public class InternController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.DeactivateIntern))]
     public async Task<IActionResult> DeactivateIntern(
         [FromRoute] int id)
     {
         var result =
-            await _service.DeactivateInternAsync(id);
+            await _service.DeactivateInternAsync(
+                id);
 
         return ServiceResultMapper.ToActionResult(
             this,
@@ -148,14 +133,12 @@ public class InternController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPatch("{id:int}/restore")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.ReactivateIntern))]
     public async Task<IActionResult> ReactivateIntern(
         [FromRoute] int id)
     {
         var result =
-            await _service.ReactivateInternAsync(id);
+            await _service.ReactivateInternAsync(
+                id);
 
         return ServiceResultMapper.ToActionResult(
             this,

@@ -1,6 +1,6 @@
 # Role Handling
 
-Persisted roles, JWT role claims, and response role values remain strings with their original spelling.
+Persisted roles and response role values remain strings with their original spelling. JWT role claims use the canonical effective role.
 
 The `Roles` constants remain the source of canonical role values used by the application and authorization attributes.
 
@@ -20,34 +20,35 @@ Role interpretation is centralized in:
 - `IsHrClaim`
 - `IsInternClaim`
 - `IsInternAccountRole`
+- `GetCanonicalRole`
+- `IsKnownRole`
 
-`IsAdminClaim`, `IsHrClaim`, and `IsInternClaim` preserve the existing exact, case-sensitive Business-layer comparisons.
-
-Unknown roles, different casing, and surrounding whitespace do not match these checks.
-
-`IsInternAccountRole` preserves the existing ordinal, case-insensitive Intern recognition used by:
+All checks use `GetCanonicalRole`, including the Intern account check used by:
 
 - Login
 - Refresh
 - `/api/auth/me`
 
-This method does not trim role values.
+| Input | Effective role |
+| --- | --- |
+| `Admin` | `Admin` |
+| `HR` | `HR` |
+| `Intern`, `intern`, `INTERN`, other Intern casing variants | `Intern` |
+| Other values, including `admin`, `hr`, whitespace-padded roles, empty or null values | Unsupported; rejected |
 
-It only determines whether authentication requires an Intern profile.
-
-It does not grant Business permissions.
+Intern matching uses ordinal, case-insensitive comparison without trimming. Privileged role values must remain exactly `Admin` or `HR`: the fix does not grant management permissions to previously noncanonical values.
 
 ---
 
-## Why the Checks Differ
+## One Effective Role Across Authentication and Authorization
 
-The claim-oriented checks and authentication-specific Intern check intentionally use different comparison behavior.
+Login and refresh reject unsupported account roles before token issuance. Refresh also revokes that account's refresh tokens. `JwtTokenService` emits a canonical role claim without modifying the User entity and refuses unsupported roles.
 
-This preserves the application's existing authorization behavior.
+After normal JWT signature, issuer, audience and lifetime validation, `RoleValidationEvents` requires one supported role claim and normalizes it before ASP.NET authorization runs. This also handles previously issued JWTs containing differently cased Intern roles. Missing, unsupported or multiple role claims fail authentication.
 
-Changing all role comparisons to case-insensitive matching could change which Business-service branches execute.
+`CurrentUserHelper` uses the same canonical interpretation. Role-dependent Business entry points reject unsupported roles before accessing repositories. All Intern casing variants enter the existing ownership and task-permission branches; they never fall through to unrestricted reads.
 
-Authorization attributes, stored role values, JWT role claims, and JWT claim generation remain unchanged.
+ASP.NET authorization attributes continue to use canonical `Roles` constants unchanged. No route, schema or persisted role value changes are required.
 
 ---
 
@@ -61,7 +62,7 @@ Authorization attributes, stored role values, JWT role claims, and JWT claim gen
 | `internProfileIsMissing` | There is no linked Intern profile. |
 | `internProfileIsInactive` | A linked Intern profile exists and has `IsActive = false`. |
 
-Non-Intern users do not require an Intern profile.
+Supported Admin and HR accounts do not require an Intern profile.
 
 Intern accounts with a missing or inactive profile are rejected using the existing authentication behavior.
 
@@ -96,7 +97,7 @@ If an authenticated Intern has a missing or inactive profile:
 - The request is rejected.
 - Authentication cookies are cleared.
 
-Non-Intern users are not required to have an Intern profile.
+Supported Admin and HR accounts are not required to have an Intern profile. An unsupported stored role is rejected and authentication cookies are cleared.
 
 ---
 
@@ -122,10 +123,11 @@ This refactor does not change:
 
 - Database schema
 - Stored role values
-- JWT claims
 - Authorization attributes
-- API contracts
+- Route and response-body contracts
 - Existing authentication messages
-- Existing authentication rejection behavior
+- Missing/inactive Intern profile rejection and revocation behavior
 
-The purpose of the refactor is to centralize role interpretation and make authentication intent easier to understand.
+Intentional security changes: mixed-case Intern roles receive canonical JWT claims and the same ownership restrictions as `Intern`; unsupported roles no longer authenticate or fall through Business authorization checks. Existing login/refresh validation-error and `/me` unauthorized response shapes are reused.
+
+Regression coverage is in `RoleHelperTests`, `AuthenticationRoleTests`, `RoleAuthorizationTests` and `JwtRoleTests`. It covers own/other resources, unknown roles, profile requirements, task permission restrictions, JWT validation and ASP.NET role policies.

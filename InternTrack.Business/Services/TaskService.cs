@@ -52,6 +52,11 @@ public class TaskService : ITaskService
         int userId,
         string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult<List<TaskItem>>.Forbidden("Bu işlem için yetkiniz yok.");
+        }
+
         if (RoleHelper.IsAdminClaim(role) || RoleHelper.IsHrClaim(role))
         {
             var allTasks =
@@ -100,6 +105,11 @@ public class TaskService : ITaskService
             int userId,
             string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult<TaskItem>.Forbidden("Bu göreve erişim yetkiniz yok.");
+        }
+
         var task =
             await _taskRepository.GetByIdAsync(id);
 
@@ -152,6 +162,11 @@ public class TaskService : ITaskService
         int userId,
         string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult.Forbidden("Bu işlem için yetkiniz yok.");
+        }
+
         int internId;
 
         var dueDateUtc =
@@ -260,6 +275,11 @@ public class TaskService : ITaskService
         int userId,
         string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult.Forbidden("Bu işlem için yetkiniz yok.");
+        }
+
         var task =
             RoleHelper.IsAdminClaim(role)
                 ? await _taskRepository
@@ -300,6 +320,11 @@ public class TaskService : ITaskService
         int userId,
         string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult.Forbidden("Bu işlem için yetkiniz yok.");
+        }
+
         var task =
             await _taskRepository.GetByIdAsync(id);
 

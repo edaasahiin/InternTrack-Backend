@@ -362,7 +362,7 @@ Repeated response metadata is centralized through:
 
     InternTrackApiConventions
 
-Controllers reference convention methods using `ApiConventionMethod`.
+Assembly-level `ApiConventionType` registration supplies conventions by action name. Five explicit `ApiConventionMethod` overrides resolve overlaps for Task creation/update, Department deactivation, and Auth avatar/profile updates.
 
 This reduces repeated `ProducesResponseType` declarations while preserving Swagger/OpenAPI response documentation.
 
@@ -406,7 +406,7 @@ Run automated tests:
 
 The current backend test suite contains:
 
-    238 passing tests
+    243 passing tests
     0 failing tests
 
 A production deployment should only continue after the required build and test checks succeed.
@@ -862,7 +862,7 @@ Current preparation includes:
 
 Current backend test status:
 
-    238 tests passed
+    243 tests passed
     0 tests failed
 
 Final production values should be configured according to the selected hosting environment before deployment.

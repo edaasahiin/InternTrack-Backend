@@ -59,6 +59,11 @@ public class InternService : IInternService
 
     public async Task<ServiceResult<List<InternResponseDto>>> GetAllAsync(int userId, string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult<List<InternResponseDto>>.Forbidden("Bu işlem için yetkiniz yok.");
+        }
+
         if (RoleHelper.IsAdminClaim(role) || RoleHelper.IsHrClaim(role))
         {
             var interns = await _internRepository.GetAllAsync();
@@ -100,6 +105,11 @@ public class InternService : IInternService
 
     public async Task<ServiceResult<InternResponseDto>> GetByIdAsync(int id, int userId, string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult<InternResponseDto>.Forbidden("Bu stajyer profiline erişim yetkiniz yok.");
+        }
+
         var intern = await _internRepository.GetByIdAsync(id);
 
         if (intern == null)

@@ -1,9 +1,8 @@
-using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
+using InternTrack.Api.Conventions;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.Constants;
 using InternTrack.Core.DTOs;
-using InternTrack.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,10 +23,7 @@ public class DepartmentController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetDepartments))]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetActiveDepartments()
     {
         var departments =
             await _service.GetAllAsync();
@@ -37,9 +33,6 @@ public class DepartmentController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpGet("get-all")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetAllDepartments))]
     public async Task<IActionResult> GetAllIncludingInactive()
     {
         var departments =
@@ -50,10 +43,7 @@ public class DepartmentController : ControllerBase
 
     [Authorize]
     [HttpGet("get-by-id/{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.GetDepartmentById))]
-    public async Task<IActionResult> GetById(
+    public async Task<IActionResult> GetDepartmentById(
         [FromRoute] int id)
     {
         var result =
@@ -66,10 +56,7 @@ public class DepartmentController : ControllerBase
 
     [Authorize(Roles = Roles.AdminOrHR)]
     [HttpPost]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.CreateDepartment))]
-    public async Task<IActionResult> Add(
+    public async Task<IActionResult> CreateDepartment(
         [FromBody] CreateDepartmentDto dto)
     {
         var result =
@@ -83,9 +70,6 @@ public class DepartmentController : ControllerBase
 
     [Authorize(Roles = Roles.AdminOrHR)]
     [HttpPut("update-by-id/{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.UpdateDepartment))]
     public async Task<IActionResult> Update(
         [FromRoute] int id,
         [FromBody] CreateDepartmentDto dto)
@@ -102,14 +86,13 @@ public class DepartmentController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id:int}")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.DeactivateDepartment))]
+    [ApiConventionMethod(typeof(InternTrackApiConventions), nameof(InternTrackApiConventions.DeactivateDepartment))]
     public async Task<IActionResult> DeactivateDepartment(
         [FromRoute] int id)
     {
         var result =
-            await _service.DeactivateDepartmentAsync(id);
+            await _service.DeactivateDepartmentAsync(
+                id);
 
         return ServiceResultMapper.ToActionResult(
             this,
@@ -119,14 +102,12 @@ public class DepartmentController : ControllerBase
 
     [Authorize(Roles = Roles.Admin)]
     [HttpPatch("{id:int}/restore")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.ReactivateDepartment))]
     public async Task<IActionResult> ReactivateDepartment(
         [FromRoute] int id)
     {
         var result =
-            await _service.ReactivateDepartmentAsync(id);
+            await _service.ReactivateDepartmentAsync(
+                id);
 
         return ServiceResultMapper.ToActionResult(
             this,

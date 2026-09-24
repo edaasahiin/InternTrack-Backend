@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using InternTrack.Core.Helpers;
 
 namespace InternTrack.Api.Helpers;
 
@@ -13,7 +14,7 @@ public static class CurrentUserHelper
 
     public static string GetRole(ClaimsPrincipal user)
     {
-        return user.FindFirstValue(ClaimTypes.Role) ?? string.Empty;
+        return RoleHelper.GetCanonicalRole(user.FindFirstValue(ClaimTypes.Role)) ?? string.Empty;
     }
 
     public static bool TryGetUserInfo(ClaimsPrincipal user, out int userId, out string role)

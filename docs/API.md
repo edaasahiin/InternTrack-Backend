@@ -168,6 +168,7 @@ Rate limiting is enabled for this endpoint.
 Possible responses:
 
 - `200 OK`
+- `400 Bad Request` (service validation failure)
 - `401 Unauthorized`
 - `429 Too Many Requests`
 
@@ -689,9 +690,7 @@ Repeated response metadata is centralized through:
 
     InternTrackApiConventions
 
-Controller actions reference convention methods through:
-
-    ApiConventionMethod
+Assembly-level `ApiConventionType` registration in `ApiConventionRegistration.cs` applies conventions by action name. Five actions explicitly select `ApiConventionMethod` for Task creation/update, Department deactivation, and Auth avatar/profile updates, preventing broad prefix conventions from supplying the wrong response set.
 
 This reduces repeated `ProducesResponseType` declarations while preserving Swagger/OpenAPI response documentation.
 

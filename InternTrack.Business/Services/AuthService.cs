@@ -110,6 +110,12 @@ public class AuthService : IAuthService
             return ServiceResult<LoginResponseDto>.ValidationError("Email veya şifre hatalı.");
         }
 
+        if (!RoleHelper.IsKnownRole(user.Role))
+        {
+            _logger.LogWarning("Login rejected because account role is unsupported. UserId: {UserId}", user.Id);
+            return ServiceResult<LoginResponseDto>.ValidationError("Email veya şifre hatalı.");
+        }
+
         var requiresInternProfile = RoleHelper.IsInternAccountRole(user.Role);
         var internProfileIsMissing = user.Intern is null;
         var internProfileIsInactive = user.Intern is { IsActive: false };
@@ -173,6 +179,13 @@ public class AuthService : IAuthService
                 storedRefreshToken.UserId);
 
             return ServiceResult<LoginResponseDto>.ValidationError("Refresh token kullanıcısı bulunamadı.");
+        }
+
+        if (!RoleHelper.IsKnownRole(currentUser.Role))
+        {
+            await _refreshTokenRepository.RevokeAllByUserIdAsync(currentUser.Id);
+            _logger.LogWarning("Token refresh rejected because account role is unsupported. UserId: {UserId}", currentUser.Id);
+            return ServiceResult<LoginResponseDto>.ValidationError("Refresh token geçersiz.");
         }
 
         var requiresInternProfile = RoleHelper.IsInternAccountRole(currentUser.Role);

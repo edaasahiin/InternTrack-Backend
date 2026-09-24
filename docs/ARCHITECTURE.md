@@ -338,7 +338,7 @@ Current tested areas include:
 
 The current test suite contains:
 
-    238 passing tests
+    243 passing tests
     0 failing tests
 
 Repositories and other dependencies are mocked where appropriate so that Business rules can be tested independently.
@@ -535,7 +535,7 @@ Examples include:
 - Deactivation responses
 - Reactivation responses
 
-Controllers reference a convention method through `ApiConventionMethod`.
+Assembly-level `ApiConventionType` registration in `ApiConventionRegistration.cs` supplies response metadata by action name. Five actions use explicit `ApiConventionMethod` overrides where their response sets differ from a matching prefix convention: Task creation/update, Department deactivation, and Auth avatar/profile updates.
 
 This reduces repeated response declarations while keeping Swagger/OpenAPI documentation available.
 
@@ -987,7 +987,7 @@ The project currently includes:
 
 Current automated test status:
 
-    238 tests passed
+    243 tests passed
     0 tests failed
 
 The project is currently in the documentation, final review, and deployment preparation phase.

@@ -33,13 +33,18 @@ public class AuthenticationRoleTests
         { "intern", false, false },
         { "intern", null, false },
         { "INTERN", null, false },
-        { "aDmIn", null, true },
-        { "hr", null, true }
+        { "INTERN", true, true },
+        { "INTERN", false, false },
+        { "aDmIn", null, false },
+        { "hr", null, false },
+        { "Unknown", null, false },
+        { "Unknown", true, false },
+        { " Intern ", true, false }
     };
 
     [Theory]
     [MemberData(nameof(AccountCases))]
-    public async Task LoginAsync_ShouldPreserveRoleAndProfileRequirements(string role, bool? profileIsActive, bool allowed)
+    public async Task LoginAsync_ShouldRequireSupportedRoleAndEligibleProfile(string role, bool? profileIsActive, bool allowed)
     {
         var user = CreateUser(role, profileIsActive);
         var users = new Mock<IUserRepository>();
@@ -62,7 +67,10 @@ public class AuthenticationRoleTests
         else
         {
             Assert.Equal(ResultType.ValidationError, result.Type);
-            Assert.Equal("Hesabınız pasif durumda. Giriş yapamazsınız.", result.Message);
+            var expectedMessage = role is "Intern" or "intern" or "INTERN"
+                ? "Hesabınız pasif durumda. Giriş yapamazsınız."
+                : "Email veya şifre hatalı.";
+            Assert.Equal(expectedMessage, result.Message);
             Assert.Null(result.Data);
         }
 
@@ -106,7 +114,10 @@ public class AuthenticationRoleTests
         else
         {
             Assert.Equal(ResultType.ValidationError, result.Type);
-            Assert.Equal("Hesabınız pasif durumda. Oturum yenilenemez.", result.Message);
+            var expectedMessage = role is "Intern" or "intern" or "INTERN"
+                ? "Hesabınız pasif durumda. Oturum yenilenemez."
+                : "Refresh token geçersiz.";
+            Assert.Equal(expectedMessage, result.Message);
             Assert.Null(result.Data);
             Assert.Null(storedToken.RevokedAt);
         }
@@ -150,7 +161,10 @@ public class AuthenticationRoleTests
         {
             var response = Assert.IsType<UnauthorizedObjectResult>(result);
             var body = JsonSerializer.SerializeToElement(response.Value);
-            Assert.Equal("Hesabınız pasif durumda.", body.GetProperty("message").GetString());
+            var expectedMessage = role is "Intern" or "intern" or "INTERN"
+                ? "Hesabınız pasif durumda."
+                : "Kullanıcı bilgisi doğrulanamadı.";
+            Assert.Equal(expectedMessage, body.GetProperty("message").GetString());
             Assert.Equal(4, context.Response.Headers.SetCookie.Count);
             Assert.All(context.Response.Headers.SetCookie, cookie => Assert.Contains("max-age=0", cookie));
         }

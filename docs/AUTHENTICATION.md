@@ -804,7 +804,7 @@ Current related test coverage includes scenarios such as:
 
 The complete backend test suite currently passes:
 
-    238 tests passed
+    243 tests passed
     0 tests failed
 
 ---

@@ -249,7 +249,7 @@ Run the automated tests with:
 
 The current backend test suite contains:
 
-    238 tests passed
+    243 tests passed
     0 tests failed
 
 The tests cover areas such as:

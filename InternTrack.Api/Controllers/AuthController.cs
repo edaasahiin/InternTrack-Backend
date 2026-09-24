@@ -1,5 +1,5 @@
-using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
+using InternTrack.Api.Conventions;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.DTOs;
 using InternTrack.Core.Helpers;
@@ -35,9 +35,6 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     [EnableRateLimiting("RegisterPolicy")]
     [HttpPost("register")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.Register))]
     public async Task<IActionResult> Register(
         [FromBody] RegisterDto dto)
     {
@@ -53,9 +50,6 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     [EnableRateLimiting("LoginPolicy")]
     [HttpPost("login")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.Login))]
     public async Task<IActionResult> Login(
         [FromBody] LoginDto dto)
     {
@@ -86,9 +80,6 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpGet("me")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.CurrentUser))]
     public async Task<IActionResult> Me()
     {
         if (!CurrentUserHelper.TryGetUserId(
@@ -113,6 +104,12 @@ public class AuthController : ControllerBase
                 message =
                     "Kullanıcı bulunamadı."
             });
+        }
+
+        if (!RoleHelper.IsKnownRole(user.Role))
+        {
+            DeleteTokenCookies();
+            return Unauthorized(new { message = "Kullanıcı bilgisi doğrulanamadı." });
         }
 
         var requiresInternProfile =
@@ -155,9 +152,7 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPut("avatar")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.UpdateAvatar))]
+    [ApiConventionMethod(typeof(InternTrackApiConventions), nameof(InternTrackApiConventions.UpdateAvatar))]
     public async Task<IActionResult> UpdateAvatar(
         [FromBody] UpdateAvatarDto dto)
     {
@@ -184,9 +179,7 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPut("profile")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.UpdateProfile))]
+    [ApiConventionMethod(typeof(InternTrackApiConventions), nameof(InternTrackApiConventions.UpdateProfile))]
     public async Task<IActionResult> UpdateProfile(
         [FromBody] UpdateProfileDto dto)
     {
@@ -213,9 +206,6 @@ public class AuthController : ControllerBase
 
     [Authorize]
     [HttpPut("change-password")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.ChangePassword))]
     public async Task<IActionResult> ChangePassword(
         [FromBody] ChangePasswordDto dto)
     {
@@ -243,9 +233,6 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     [EnableRateLimiting("RefreshPolicy")]
     [HttpPost("refresh")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.Refresh))]
     public async Task<IActionResult> Refresh()
     {
         var refreshToken =
@@ -291,9 +278,6 @@ public class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("logout")]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.Logout))]
     public async Task<IActionResult> Logout()
     {
         var refreshToken =

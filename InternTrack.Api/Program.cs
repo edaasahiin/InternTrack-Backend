@@ -1,5 +1,6 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using InternTrack.Api.Authentication;
 using InternTrack.Api.Extensions;
 using InternTrack.Api.Middleware;
 using InternTrack.Business.Interfaces;
@@ -75,6 +76,8 @@ if (string.IsNullOrWhiteSpace(jwtAudience))
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
+    options.Events = new RoleValidationEvents();
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,

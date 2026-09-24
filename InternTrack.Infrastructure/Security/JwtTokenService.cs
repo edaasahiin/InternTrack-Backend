@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using InternTrack.Business.Interfaces;
 using InternTrack.Core.Models;
+using InternTrack.Core.Helpers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -20,6 +21,9 @@ public class JwtTokenService : ITokenService
 
     public string CreateAccessToken(User user)
     {
+        var role = RoleHelper.GetCanonicalRole(user.Role)
+            ?? throw new InvalidOperationException("Cannot issue an access token for an unsupported role.");
+
         var key = _configuration["Jwt:Key"];
         var issuer = _configuration["Jwt:Issuer"];
         var audience = _configuration["Jwt:Audience"];
@@ -46,7 +50,7 @@ public class JwtTokenService : ITokenService
 
             new Claim(ClaimTypes.Email, user.Email),
 
-            new Claim(ClaimTypes.Role, user.Role)
+            new Claim(ClaimTypes.Role, role)
         };
 
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));

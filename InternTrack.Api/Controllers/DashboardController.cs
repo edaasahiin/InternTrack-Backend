@@ -1,4 +1,3 @@
-using InternTrack.Api.Conventions;
 using InternTrack.Api.Helpers;
 using InternTrack.Business.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -14,22 +13,24 @@ public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
 
-    public DashboardController(IDashboardService dashboardService)
+    public DashboardController(
+        IDashboardService dashboardService)
     {
         _dashboardService = dashboardService;
     }
 
     [HttpGet]
-    [ApiConventionMethod(
-        typeof(InternTrackApiConventions),
-        nameof(InternTrackApiConventions.DashboardStats))]
     public async Task<IActionResult> GetStats()
     {
-        if (!CurrentUserHelper.TryGetUserInfo(User, out var userId, out var role))
+        if (!CurrentUserHelper.TryGetUserInfo(
+                User,
+                out var userId,
+                out var role))
         {
             return Unauthorized(new
             {
-                message = "Kullanıcı bilgileri doğrulanamadı."
+                message =
+                    "Kullanıcı bilgileri doğrulanamadı."
             });
         }
 

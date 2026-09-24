@@ -32,6 +32,11 @@ public class DashboardService : IDashboardService
 
     public async Task<ServiceResult<DashboardStatsDto>> GetStatsAsync(int userId, string role)
     {
+        if (!RoleHelper.IsKnownRole(role))
+        {
+            return ServiceResult<DashboardStatsDto>.Forbidden("Bu işlem için yetkiniz yok.");
+        }
+
         if (RoleHelper.IsAdminClaim(role) || RoleHelper.IsHrClaim(role))
         {
             var interns = await _internRepository.GetAllAsync();
